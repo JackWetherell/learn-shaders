@@ -50,7 +50,7 @@ frame=single
 \newcommand{\mat}[1]{\mathbf{#1}}
 
 \title{\textbf{From Bits to Pixels} \\
-\large The Mathematical and Physical Foundations of elementary 3D Graphics}
+\large \textit{The Mathematical and Physical Foundations of elementary 3D Graphics}}
 \author{Jack Wetherell}
 \date{}
 
@@ -700,5 +700,194 @@ At every stage:
 \end{itemize}
 
 Thus, the entire graphics pipeline can be viewed as a sequence of basis transformations applied to vertex data.
+
+\section{Rasterization}
+
+Rasterization is the process of converting geometric primitives (triangles) into discrete pixels on the screen.
+
+Given vertices in screen space:
+
+\begin{equation}
+    \mathbf{v}_0 = (x_0, y_0, z_0), \quad
+    \mathbf{v}_1 = (x_1, y_1, z_1), \quad
+    \mathbf{v}_2 = (x_2, y_2, z_2)
+\end{equation}
+
+the goal is to determine which pixels lie inside the triangle and compute their attributes.
+
+
+\subsection{Triangle Setup}
+
+A triangle is defined by three vertices in screen space:
+
+\begin{equation}
+    \triangle = (\mathbf{v}_0, \mathbf{v}_1, \mathbf{v}_2)
+\end{equation}
+
+We define edge functions to determine whether a point lies inside the triangle.
+
+For a point $\mathbf{p} = (x, y)$, define:
+
+\begin{equation}
+    E_{ij}(\mathbf{p}) =
+    (x - x_i)(y_j - y_i) - (y - y_i)(x_j - x_i)
+\end{equation}
+
+A point is inside the triangle if:
+
+\begin{equation}
+    E_{01}(\mathbf{p}) \ge 0, \quad
+    E_{12}(\mathbf{p}) \ge 0, \quad
+    E_{20}(\mathbf{p}) \ge 0
+\end{equation}
+
+(for a consistently wound triangle)
+
+\paragraph{Interpretation:}
+
+Each edge function represents a signed area test.
+
+
+\subsection{Barycentric Coordinates}
+
+Any point inside the triangle can be expressed as a weighted combination of the vertices:
+
+\begin{equation}
+    \mathbf{p} = \alpha \mathbf{v}_0 + \beta \mathbf{v}_1 + \gamma \mathbf{v}_2
+\end{equation}
+
+with:
+
+\begin{equation}
+    \alpha + \beta + \gamma = 1
+\end{equation}
+
+The barycentric coordinates can be computed using areas:
+
+\begin{equation}
+    \alpha = \frac{A(\mathbf{p}, \mathbf{v}_1, \mathbf{v}_2)}{A(\mathbf{v}_0, \mathbf{v}_1, \mathbf{v}_2)}
+\end{equation}
+
+\begin{equation}
+    \beta = \frac{A(\mathbf{v}_0, \mathbf{p}, \mathbf{v}_2)}{A(\mathbf{v}_0, \mathbf{v}_1, \mathbf{v}_2)}
+\end{equation}
+
+\begin{equation}
+    \gamma = \frac{A(\mathbf{v}_0, \mathbf{v}_1, \mathbf{p})}{A(\mathbf{v}_0, \mathbf{v}_1, \mathbf{v}_2)}
+\end{equation}
+
+where:
+
+\begin{equation}
+    A(\mathbf{a}, \mathbf{b}, \mathbf{c}) =
+    \frac{1}{2}
+    \begin{vmatrix}
+        a_x & a_y & 1 \\
+        b_x & b_y & 1 \\
+        c_x & c_y & 1
+    \end{vmatrix}
+\end{equation}
+
+\subsection{Interpolation Across Surfaces}
+
+Once barycentric coordinates are known, any vertex attribute can be interpolated.
+
+Let $q$ be a per-vertex attribute (e.g. depth, color, texture coordinate):
+
+\begin{equation}
+    q_0, \quad q_1, \quad q_2
+\end{equation}
+
+Then:
+
+\begin{equation}
+    q(\mathbf{p}) = \alpha q_0 + \beta q_1 + \gamma q_2
+\end{equation}
+
+\paragraph{Important: Perspective-Correct Interpolation}
+
+Due to perspective projection, interpolation must be corrected using $w$:
+
+\begin{equation}
+    q' = \frac{q}{w}
+\end{equation}
+
+Interpolate:
+
+\begin{equation}
+    q'(\mathbf{p}) = \alpha q'_0 + \beta q'_1 + \gamma q'_2
+\end{equation}
+
+Then recover:
+
+\begin{equation}
+    q(\mathbf{p}) =
+    \frac{q'(\mathbf{p})}{\alpha \frac{1}{w_0} + \beta \frac{1}{w_1} + \gamma \frac{1}{w_2}}
+\end{equation}
+
+\subsection{Depth Testing (Z-Buffer)}
+
+Each pixel stores a depth value:
+
+\begin{equation}
+    z_{\text{buffer}}(x,y)
+\end{equation}
+
+For a candidate fragment with depth $z_{\text{new}}$:
+
+\begin{equation}
+    z_{\text{new}} < z_{\text{buffer}}(x,y)
+    \Rightarrow
+    \text{fragment is visible}
+\end{equation}
+
+If true:
+
+\begin{equation}
+    z_{\text{buffer}}(x,y) \leftarrow z_{\text{new}}
+\end{equation}
+
+\begin{equation}
+    \text{color}(x,y) \leftarrow \text{fragment color}
+\end{equation}
+
+Otherwise, the fragment is discarded.
+
+\paragraph{Depth Range:}
+
+After projection:
+
+\begin{equation}
+    z \in [0,1]
+\end{equation}
+
+\paragraph{Non-linearity:}
+
+Depth is non-linear with respect to camera distance:
+
+\begin{equation}
+    z \sim \frac{1}{z_{camera}}
+\end{equation}
+
+This provides higher precision near the camera.
+
+\subsection{Summary}
+
+Rasterization converts triangles into pixels through:
+
+\begin{equation}
+    \text{Triangle} \rightarrow \text{Fragments} \rightarrow \text{Pixels}
+\end{equation}
+
+Key steps:
+
+\begin{itemize}
+    \item Determine pixel coverage (edge functions)
+    \item Compute barycentric coordinates
+    \item Interpolate attributes
+    \item Perform depth testing
+\end{itemize}
+
+Thus, rasterization bridges continuous geometry and discrete image representation.
 
 \end{document}

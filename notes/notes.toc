@@ -30,3 +30,13 @@
 \contentsline {subsection}{\numberline {3.6}Screen Space}{8}{subsection.3.6}%
 \contentsline {subsection}{\numberline {3.7}Summary of Transform Pipeline}{9}{subsection.3.7}%
 \contentsline {subsection}{\numberline {3.8}Conceptual Interpretation}{9}{subsection.3.8}%
+\contentsline {section}{\numberline {4}Rasterization}{9}{section.4}%
+\contentsline {subsection}{\numberline {4.1}Triangle Setup}{9}{subsection.4.1}%
+\contentsline {paragraph}{Interpretation:}{9}{equation.74}%
+\contentsline {subsection}{\numberline {4.2}Barycentric Coordinates}{10}{subsection.4.2}%
+\contentsline {subsection}{\numberline {4.3}Interpolation Across Surfaces}{10}{subsection.4.3}%
+\contentsline {paragraph}{Important: Perspective-Correct Interpolation}{10}{equation.82}%
+\contentsline {subsection}{\numberline {4.4}Depth Testing (Z-Buffer)}{11}{subsection.4.4}%
+\contentsline {paragraph}{Depth Range:}{11}{equation.89}%
+\contentsline {paragraph}{Non-linearity:}{11}{equation.90}%
+\contentsline {subsection}{\numberline {4.5}Summary}{11}{subsection.4.5}%
