@@ -21,58 +21,72 @@
 \contentsline {subsection}{\numberline {2.5}Scenes as Collections of Objects}{7}{subsection.2.5}%
 \contentsline {paragraph}{Global Interpretation:}{7}{equation.41}%
 \contentsline {paragraph}{Final Structure in Memory:}{7}{equation.42}%
-\contentsline {section}{\numberline {3}Coordinate Systems and Spaces}{7}{section.3}%
-\contentsline {subsection}{\numberline {3.1}Local (Object) Space}{7}{subsection.3.1}%
-\contentsline {subsection}{\numberline {3.2}World Space}{8}{subsection.3.2}%
-\contentsline {subsection}{\numberline {3.3}Camera (View) Space}{8}{subsection.3.3}%
-\contentsline {subsection}{\numberline {3.4}Clip Space}{8}{subsection.3.4}%
-\contentsline {subsection}{\numberline {3.5}Normalized Device Coordinates (NDC)}{9}{subsection.3.5}%
-\contentsline {subsection}{\numberline {3.6}Screen Space}{9}{subsection.3.6}%
-\contentsline {subsection}{\numberline {3.7}Summary of Transform Pipeline}{10}{subsection.3.7}%
-\contentsline {subsection}{\numberline {3.8}Conceptual Interpretation}{10}{subsection.3.8}%
-\contentsline {section}{\numberline {4}Rasterization}{10}{section.4}%
-\contentsline {subsection}{\numberline {4.1}Triangle Setup}{10}{subsection.4.1}%
-\contentsline {paragraph}{Interpretation:}{10}{equation.74}%
-\contentsline {subsection}{\numberline {4.2}Barycentric Coordinates}{11}{subsection.4.2}%
-\contentsline {subsection}{\numberline {4.3}Interpolation Across Surfaces}{11}{subsection.4.3}%
-\contentsline {paragraph}{Important: Perspective-Correct Interpolation}{11}{equation.82}%
-\contentsline {subsection}{\numberline {4.4}Depth Testing (Z-Buffer)}{12}{subsection.4.4}%
-\contentsline {paragraph}{Depth Range:}{12}{equation.89}%
-\contentsline {paragraph}{Non-linearity:}{12}{equation.90}%
-\contentsline {subsection}{\numberline {4.5}Summary}{12}{subsection.4.5}%
-\contentsline {section}{\numberline {5}Memory Layout of Graphics Data}{12}{section.5}%
-\contentsline {subsection}{\numberline {5.1}Vertex Buffers}{13}{subsection.5.1}%
-\contentsline {paragraph}{Memory Layout:}{13}{equation.94}%
-\contentsline {paragraph}{Example (Position Only):}{13}{equation.95}%
-\contentsline {paragraph}{Contiguous Storage:}{13}{equation.97}%
-\contentsline {subsection}{\numberline {5.2}Index Buffers}{13}{subsection.5.2}%
-\contentsline {paragraph}{Memory Representation:}{13}{equation.100}%
-\contentsline {paragraph}{Example:}{13}{equation.101}%
-\contentsline {subsection}{\numberline {5.3}Transformation Storage}{13}{subsection.5.3}%
-\contentsline {paragraph}{Matrix Layout:}{14}{equation.103}%
-\contentsline {paragraph}{Memory Size:}{14}{equation.104}%
-\contentsline {paragraph}{Storage Format:}{14}{equation.105}%
-\contentsline {paragraph}{Note:}{14}{equation.106}%
-\contentsline {subsection}{\numberline {5.4}Estimating Memory Usage}{14}{subsection.5.4}%
-\contentsline {paragraph}{Vertex Buffer Size:}{14}{equation.109}%
-\contentsline {paragraph}{Index Buffer Size:}{14}{equation.110}%
-\contentsline {paragraph}{Transformation Size:}{14}{equation.112}%
-\contentsline {paragraph}{Total Memory:}{14}{equation.113}%
-\contentsline {subsection}{\numberline {5.5}Example: Pyramid}{15}{subsection.5.5}%
-\contentsline {paragraph}{Vertex Memory:}{15}{subsection.5.5}%
-\contentsline {paragraph}{Index Memory (32-bit):}{15}{equation.115}%
-\contentsline {paragraph}{Transform:}{15}{equation.116}%
-\contentsline {paragraph}{Total:}{15}{equation.117}%
-\contentsline {subsection}{\numberline {5.6}Summary}{15}{subsection.5.6}%
-\contentsline {section}{\numberline {6}Specialized Hardware in GPUs}{15}{section.6}%
-\contentsline {subsection}{\numberline {6.1}Graphics Pipelines and Fixed Function Units}{15}{subsection.6.1}%
-\contentsline {paragraph}{Fixed-Function Stages:}{16}{equation.122}%
-\contentsline {subsection}{\numberline {6.2}Ray Tracing Cores (RT Cores)}{16}{subsection.6.2}%
-\contentsline {subsection}{\numberline {6.3}Tensor Cores and Machine Learning}{17}{subsection.6.3}%
-\contentsline {paragraph}{Key Property:}{17}{equation.132}%
-\contentsline {subsection}{\numberline {6.4}Evolution of GPU Specialization}{17}{subsection.6.4}%
-\contentsline {paragraph}{Stage 1: Fixed-Function Graphics}{17}{subsection.6.4}%
-\contentsline {paragraph}{Stage 2: Programmable Shaders}{17}{equation.134}%
-\contentsline {paragraph}{Stage 3: General-Purpose GPU (GPGPU)}{17}{equation.135}%
-\contentsline {paragraph}{Stage 4: Specialized Accelerators}{17}{equation.136}%
-\contentsline {subsection}{\numberline {6.5}Conceptual Interpretation}{18}{subsection.6.5}%
+\contentsline {section}{\numberline {3}Basis Vectors and Coordinate Consistency}{7}{section.3}%
+\contentsline {subsection}{\numberline {3.1}Implicit Basis in Matrix Representations}{7}{subsection.3.1}%
+\contentsline {paragraph}{Key Insight:}{7}{equation.47}%
+\contentsline {paragraph}{Matrices Encode Bases:}{8}{equation.48}%
+\contentsline {subsection}{\numberline {3.2}Consistency of Basis in Matrix Multiplication}{8}{subsection.3.2}%
+\contentsline {paragraph}{Composition of Transformations:}{8}{equation.52}%
+\contentsline {paragraph}{Key Constraint:}{8}{equation.54}%
+\contentsline {subsection}{\numberline {3.3}Local vs World Basis Interpretation}{8}{subsection.3.3}%
+\contentsline {paragraph}{Local Basis:}{8}{subsection.3.3}%
+\contentsline {paragraph}{World Basis:}{8}{equation.57}%
+\contentsline {paragraph}{Interpretation of $M_{model}$:}{9}{equation.59}%
+\contentsline {subsection}{\numberline {3.4}Transform Chains as Basis Transitions}{9}{subsection.3.4}%
+\contentsline {paragraph}{Key Insight:}{9}{equation.62}%
+\contentsline {subsection}{\numberline {3.5}Conceptual Summary}{9}{subsection.3.5}%
+\contentsline {section}{\numberline {4}Coordinate Systems and Spaces}{9}{section.4}%
+\contentsline {subsection}{\numberline {4.1}Local (Object) Space}{10}{subsection.4.1}%
+\contentsline {subsection}{\numberline {4.2}World Space}{10}{subsection.4.2}%
+\contentsline {subsection}{\numberline {4.3}Camera (View) Space}{10}{subsection.4.3}%
+\contentsline {subsection}{\numberline {4.4}Clip Space}{11}{subsection.4.4}%
+\contentsline {subsection}{\numberline {4.5}Normalized Device Coordinates (NDC)}{11}{subsection.4.5}%
+\contentsline {subsection}{\numberline {4.6}Screen Space}{12}{subsection.4.6}%
+\contentsline {subsection}{\numberline {4.7}Summary of Transform Pipeline}{12}{subsection.4.7}%
+\contentsline {subsection}{\numberline {4.8}Conceptual Interpretation}{12}{subsection.4.8}%
+\contentsline {section}{\numberline {5}Rasterization}{12}{section.5}%
+\contentsline {subsection}{\numberline {5.1}Triangle Setup}{13}{subsection.5.1}%
+\contentsline {paragraph}{Interpretation:}{13}{equation.96}%
+\contentsline {subsection}{\numberline {5.2}Barycentric Coordinates}{13}{subsection.5.2}%
+\contentsline {subsection}{\numberline {5.3}Interpolation Across Surfaces}{13}{subsection.5.3}%
+\contentsline {paragraph}{Important: Perspective-Correct Interpolation}{14}{equation.104}%
+\contentsline {subsection}{\numberline {5.4}Depth Testing (Z-Buffer)}{14}{subsection.5.4}%
+\contentsline {paragraph}{Depth Range:}{14}{equation.111}%
+\contentsline {paragraph}{Non-linearity:}{14}{equation.112}%
+\contentsline {subsection}{\numberline {5.5}Summary}{14}{subsection.5.5}%
+\contentsline {section}{\numberline {6}Memory Layout of Graphics Data}{15}{section.6}%
+\contentsline {subsection}{\numberline {6.1}Vertex Buffers}{15}{subsection.6.1}%
+\contentsline {paragraph}{Memory Layout:}{15}{equation.116}%
+\contentsline {paragraph}{Example (Position Only):}{15}{equation.117}%
+\contentsline {paragraph}{Contiguous Storage:}{15}{equation.119}%
+\contentsline {subsection}{\numberline {6.2}Index Buffers}{15}{subsection.6.2}%
+\contentsline {paragraph}{Memory Representation:}{15}{equation.122}%
+\contentsline {paragraph}{Example:}{15}{equation.123}%
+\contentsline {subsection}{\numberline {6.3}Transformation Storage}{16}{subsection.6.3}%
+\contentsline {paragraph}{Matrix Layout:}{16}{equation.125}%
+\contentsline {paragraph}{Memory Size:}{16}{equation.126}%
+\contentsline {paragraph}{Storage Format:}{16}{equation.127}%
+\contentsline {paragraph}{Note:}{16}{equation.128}%
+\contentsline {subsection}{\numberline {6.4}Estimating Memory Usage}{16}{subsection.6.4}%
+\contentsline {paragraph}{Vertex Buffer Size:}{16}{equation.131}%
+\contentsline {paragraph}{Index Buffer Size:}{16}{equation.132}%
+\contentsline {paragraph}{Transformation Size:}{16}{equation.134}%
+\contentsline {paragraph}{Total Memory:}{16}{equation.135}%
+\contentsline {subsection}{\numberline {6.5}Example: Pyramid}{17}{subsection.6.5}%
+\contentsline {paragraph}{Vertex Memory:}{17}{subsection.6.5}%
+\contentsline {paragraph}{Index Memory (32-bit):}{17}{equation.137}%
+\contentsline {paragraph}{Transform:}{17}{equation.138}%
+\contentsline {paragraph}{Total:}{17}{equation.139}%
+\contentsline {subsection}{\numberline {6.6}Summary}{17}{subsection.6.6}%
+\contentsline {section}{\numberline {7}Specialized Hardware in GPUs}{17}{section.7}%
+\contentsline {subsection}{\numberline {7.1}Graphics Pipelines and Fixed Function Units}{17}{subsection.7.1}%
+\contentsline {paragraph}{Fixed-Function Stages:}{18}{equation.144}%
+\contentsline {subsection}{\numberline {7.2}Ray Tracing Cores (RT Cores)}{18}{subsection.7.2}%
+\contentsline {subsection}{\numberline {7.3}Tensor Cores and Machine Learning}{19}{subsection.7.3}%
+\contentsline {paragraph}{Key Property:}{19}{equation.154}%
+\contentsline {subsection}{\numberline {7.4}Evolution of GPU Specialization}{19}{subsection.7.4}%
+\contentsline {paragraph}{Stage 1: Fixed-Function Graphics}{19}{subsection.7.4}%
+\contentsline {paragraph}{Stage 2: Programmable Shaders}{19}{equation.156}%
+\contentsline {paragraph}{Stage 3: General-Purpose GPU (GPGPU)}{19}{equation.157}%
+\contentsline {paragraph}{Stage 4: Specialized Accelerators}{19}{equation.158}%
+\contentsline {subsection}{\numberline {7.5}Conceptual Interpretation}{20}{subsection.7.5}%
