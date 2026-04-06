@@ -65,9 +65,11 @@ frame=single
 
 \section{Foundations: Numbers, Memory, and Representation}
 
+Before any triangle is drawn or any shader executes, the hardware must represent numbers. Everything in a computer, every vertex coordinate, every matrix entry, every color value ultimately lives as a pattern of electrical high/low signals stored in transistors. Understanding how numbers are encoded in this binary substrate is the starting point for understanding the entire graphics pipeline.
+
 \subsection{Bits, Bytes, and Binary Storage}
 
-At the lowest level, all data in a computer is represented using binary digits.
+At the lowest level, all data in a computer is represented using binary digits. A transistor can be either conducting or non-conducting, which maps cleanly to the two states of a binary digit.
 
 \begin{itemize}
     \item A \textbf{bit} is a single binary value:
@@ -81,7 +83,7 @@ At the lowest level, all data in a computer is represented using binary digits.
     \end{equation}
 \end{itemize}
 
-A sequence of bits can represent integers using positional notation in base 2:
+A sequence of bits can represent integers using positional notation in base 2. Just as the decimal digit in the ``tens'' column contributes a factor of $10^1$, the bit in position $i$ contributes a factor of $2^i$:
 
 \begin{equation}
     N = \sum_{i=0}^{n-1} b_i \cdot 2^i
@@ -90,37 +92,41 @@ A sequence of bits can represent integers using positional notation in base 2:
 where:
 \begin{itemize}
     \item $b_i$ is the $i$-th bit (0 or 1)
-    \item $i = 0$ corresponds to the least significant bit (LSB)
+    \item $i = 0$ corresponds to the least significant bit (LSB), i.e.\ the rightmost bit
 \end{itemize}
 
 \paragraph{Example:}
 \begin{equation}
-    1011_2 = 1 \cdot 2^3 + 0 \cdot 2^2 + 1 \cdot 2^1 + 1 \cdot 2^0 = 11_{10}
+    1011_2 = 1 \cdot 2^3 + 0 \cdot 2^2 + 1 \cdot 2^1 + 1 \cdot 2^0 = 8 + 0 + 2 + 1 = 11_{10}
 \end{equation}
 
-Memory is therefore a linear array of bytes:
+With $n$ bits we can represent $2^n$ distinct values, ranging from $0$ to $2^n - 1$. A single byte therefore covers $0$ to $255$, which is why unsigned 8-bit colour channels run from 0 to 255.
+
+Memory is a linear array of bytes, each uniquely identified by a non-negative integer address:
 
 \begin{equation}
     \text{Memory} = [\text{byte}_0, \text{byte}_1, \dots, \text{byte}_N]
 \end{equation}
 
-Each byte has an address:
-
 \begin{equation}
     \text{Address} \in \mathbb{N}
 \end{equation}
 
+The CPU and GPU access memory by supplying an address; the hardware returns the bytes stored at that location. Multi-byte values (such as 32-bit floats) occupy several consecutive addresses.
+
 
 \subsection{Floating Point Representation (IEEE 754)}
 
-Real numbers are represented approximately using the IEEE 754 floating point format.
+Integers can be stored exactly in binary, but 3D graphics relies heavily on \emph{real} numbers --- positions, angles, colours. Real numbers cannot in general be represented exactly with a finite number of bits, so we use an approximation: \textbf{floating point}.
+
+The IEEE 754 standard defines the format used by virtually every modern processor and GPU. The key idea is to store numbers in a form analogous to scientific notation: a sign, a significand (the meaningful digits), and an exponent that scales the significand by a power of two.
 
 A 32-bit floating point number (single precision) is composed of:
 
 \begin{itemize}
-    \item 1 bit for the sign ($s$)
-    \item 8 bits for the exponent ($e$)
-    \item 23 bits for the mantissa (fraction) ($m$)
+    \item 1 bit for the sign ($s$): determines whether the value is positive or negative
+    \item 8 bits for the exponent ($e$): encodes a power-of-two scale factor
+    \item 23 bits for the mantissa (fraction) ($m$): encodes the significant digits
 \end{itemize}
 
 The value represented is:
@@ -129,23 +135,27 @@ The value represented is:
     x = (-1)^s \cdot (1 + m) \cdot 2^{e - 127}
 \end{equation}
 
-where:
+where the fractional part of the mantissa is:
 \begin{equation}
     m = \sum_{i=1}^{23} m_i \cdot 2^{-i}
 \end{equation}
 
 \paragraph{Interpretation:}
 \begin{itemize}
-    \item $(-1)^s$ determines the sign
-    \item $(1 + m)$ is the normalized significand
-    \item $e - 127$ is the unbiased exponent
+    \item $(-1)^s$ determines the sign: $s=0$ gives $+1$, $s=1$ gives $-1$
+    \item $(1 + m)$ is the \textbf{normalized significand}. The leading 1 is not stored explicitly, it is always implied, giving 24 bits of effective precision for ``free''
+    \item $e - 127$ is the \textbf{unbiased exponent}. The bias of 127 means the stored value $e$ represents the true exponent $e - 127 \in [-126, 127]$, allowing negative exponents to be stored as positive integers without a separate sign bit
 \end{itemize}
 
 \paragraph{Special Cases:}
+
+Not all 256 values of $e$ correspond to normal numbers:
 \begin{itemize}
-    \item $e = 0$ → denormalized numbers
-    \item $e = 255$ → infinity or NaN
+    \item $e = 0$ $\rightarrow$ \textbf{denormalized numbers}: the leading 1 is \emph{not} implied; used for very small magnitudes close to zero
+    \item $e = 255$ $\rightarrow$ reserved: represents $\pm\infty$ (when $m = 0$) or \textbf{NaN} (Not a Number, when $m \neq 0$)
 \end{itemize}
+
+Single precision can represent magnitudes from roughly $10^{-38}$ to $10^{38}$, with about 7 significant decimal digits of precision. This is generally adequate for geometry, but precision loss (``z-fighting'') can occur when two surfaces are very close together in depth.
 
 \subsection{From Raw Memory to Numerical Values}
 
@@ -167,9 +177,7 @@ These bytes are interpreted according to the IEEE 754 structure:
 
 \paragraph{Example: Representing $x = 7.98$}
 
-The decimal number $7.98$ cannot be represented exactly in binary, so it is approximated.
-
-Its IEEE 754 single-precision representation is:
+The decimal number $7.98$ cannot be represented exactly in binary because its binary expansion is non-terminating (analogous to $\frac{1}{3}$ in decimal). The IEEE 754 representation therefore rounds to the nearest representable value:
 
 \begin{equation}
     x \approx 7.980000019073486
@@ -196,23 +204,26 @@ Breaking this down:
     \begin{equation}
         e_{\text{unbiased}} = 129 - 127 = 2
     \end{equation}
+    This means the value is scaled by $2^2 = 4$.
 
     \item Mantissa:
     \begin{equation}
         m = 1.1111111001100110011010_2
     \end{equation}
+    With the implicit leading 1, the significand is approximately $1.995$.
 \end{itemize}
 
 Reconstructing the value:
 
 \begin{equation}
-    x = (-1)^0 \cdot (1 + m_{\text{fraction}}) \cdot 2^2
+    x = (-1)^0 \cdot (1 + m_{\text{fraction}}) \cdot 2^2 \approx 1.995 \times 4 \approx 7.98
 \end{equation}
 
+The small error ($\approx 2 \times 10^{-8}$) is intrinsic to the finite-precision representation.
 
 \paragraph{Key Insight:}
 
-There is no intrinsic meaning in memory—only interpretation.
+There is no intrinsic meaning in memory, only interpretation. The same 32 bits could be read as a float, as an integer, as four colour bytes, or as part of a vertex. The \emph{program} (or \emph{shader}) decides how to interpret the raw bit pattern:
 
 \begin{equation}
     \text{Bits} \xrightarrow{\text{interpretation}} \text{Number}
@@ -228,17 +239,21 @@ The same sequence of bits may represent:
 
 \paragraph{Conclusion:}
 
-All higher-level constructs (vectors, matrices, geometry) are built from:
+All higher-level constructs (vectors, matrices, geometry) are built from this foundation:
 
 \begin{equation}
     \text{Bits} \rightarrow \text{Bytes} \rightarrow \text{Floats} \rightarrow \text{Mathematical Objects}
 \end{equation}
 
+This chain is not merely theoretical, every vertex shader operand, every matrix entry in a uniform buffer, and every colour written to a framebuffer passes through exactly this representation.
+
 \section{Geometry Representation in Memory}
+
+Now that we understand how individual numbers are stored, we can build up the geometric structures needed to describe 3D scenes. The central challenge is to represent continuous geometry, surfaces, volumes, objects --- using discrete data structures that can be stored in memory and processed efficiently by the GPU.
 
 \subsection{Vertices (Position Vectors)}
 
-A \textbf{vertex} represents a point in 3D space.
+A \textbf{vertex} represents a point in 3D space. It is the fundamental geometric primitive: all surfaces are built from vertices.
 
 In its simplest form, a vertex consists of three floating-point values:
 
@@ -252,7 +267,7 @@ In its simplest form, a vertex consists of three floating-point values:
     \in \mathbb{R}^3
 \end{equation}
 
-For transformation purposes, vertices are often expressed in homogeneous coordinates:
+For transformation purposes, vertices are often expressed in \textbf{homogeneous coordinates} by appending a fourth component $w = 1$:
 
 \begin{equation}
     \mathbf{v}_h =
@@ -265,9 +280,11 @@ For transformation purposes, vertices are often expressed in homogeneous coordin
     \in \mathbb{R}^4
 \end{equation}
 
+The reason for this extra component is that translation , shifting a point in space , cannot be expressed as a $3 \times 3$ matrix multiplication. By working in 4D homogeneous coordinates, translation can be encoded as a $4 \times 4$ matrix, and all affine transformations (translation, rotation, scale, shear) can be composed by simple matrix multiplication. The convention $w = 1$ distinguishes \emph{points} from \emph{directions} (which use $w = 0$ and are unaffected by translation).
+
 \paragraph{Memory Representation:}
 
-Each coordinate is a 32-bit float:
+Each coordinate is a 32-bit float (4 bytes):
 
 \begin{equation}
     \text{vertex} = [x, y, z]
@@ -277,7 +294,7 @@ Each coordinate is a 32-bit float:
     \text{size of vertex} = 3 \times 4\ \text{bytes} = 12\ \text{bytes}
 \end{equation}
 
-Thus, a vertex buffer is:
+Thus, a vertex buffer is a contiguous array of these structures:
 
 \begin{equation}
     V = [\mathbf{v}_0, \mathbf{v}_1, \dots, \mathbf{v}_n]
@@ -286,7 +303,13 @@ Thus, a vertex buffer is:
 
 \subsection{Triangles (Faces)}
 
-The fundamental rendering primitive is the \textbf{triangle}.
+The fundamental rendering primitive is the \textbf{triangle}. While real-world surfaces are smooth and curved, the GPU approximates them with flat triangular facets. Triangles are chosen rather than other polygons for several important reasons:
+\begin{itemize}
+    \item A triangle is always \emph{planar} , three non-collinear points uniquely define a flat surface, so no special handling is needed
+    \item A triangle is always \emph{convex} --- this simplifies rasterization (covered in Section~\ref{sec:rasterization})
+    \item Any polygon can be decomposed into triangles (\emph{triangulated})
+    \item Hardware can be optimized for a single primitive type
+\end{itemize}
 
 A triangle is defined by three vertices:
 
@@ -294,7 +317,7 @@ A triangle is defined by three vertices:
     \triangle = (\mathbf{v}_0, \mathbf{v}_1, \mathbf{v}_2)
 \end{equation}
 
-Geometrically, any point inside the triangle can be expressed using barycentric coordinates:
+Geometrically, any point inside the triangle can be expressed using \textbf{barycentric coordinates} $(\alpha, \beta, \gamma)$ as a weighted sum of the vertices. This is the natural coordinate system for a triangle:
 
 \begin{equation}
     \mathbf{p} = \alpha \mathbf{v}_0 + \beta \mathbf{v}_1 + \gamma \mathbf{v}_2
@@ -305,6 +328,8 @@ subject to:
 \begin{equation}
     \alpha + \beta + \gamma = 1, \quad \alpha, \beta, \gamma \geq 0
 \end{equation}
+
+Each coefficient measures how ``close'' the point is to the corresponding vertex: $\alpha = 1$ gives exactly $\mathbf{v}_0$, and $\alpha = 0$ means the point is on the opposite edge. Barycentric coordinates are essential for interpolating per-vertex attributes (colours, normals, texture coordinates) across the triangle interior.
 
 \paragraph{Memory Representation (Non-Indexed):}
 
@@ -317,33 +342,35 @@ Each triangle stores three full vertices:
 
 \subsection{Indexed vs Non-Indexed Geometry}
 
+In practice, adjacent triangles \emph{share vertices}, every interior vertex of a mesh is shared by roughly six triangles. Storing each vertex explicitly per-triangle wastes memory and prevents the GPU from reusing cached vertex computations.
+
 \paragraph{Non-Indexed Representation:}
 
-Each triangle explicitly stores its vertices:
+Each triangle explicitly stores its three vertices:
 
 \begin{equation}
     T = [\mathbf{v}_0, \mathbf{v}_1, \mathbf{v}_2]
 \end{equation}
 
-This leads to duplication of shared vertices.
+This leads to duplication: a vertex shared by $k$ triangles is stored $k$ times. For a closed mesh this is typically a $6\times$ redundancy.
 
 \paragraph{Indexed Representation:}
 
-Vertices are stored once in a vertex buffer:
+Instead, vertices are stored \emph{once} in a vertex buffer:
 
 \begin{equation}
     V = [\mathbf{v}_0, \mathbf{v}_1, \dots, \mathbf{v}_n]
 \end{equation}
 
-Triangles are defined using indices:
+Triangles are then defined by integer \emph{indices} into this buffer, rather than by copying vertex data:
 
 \begin{equation}
     F = [(i_0, i_1, i_2), (i_3, i_4, i_5), (i_6, i_7, i_8)]
 \end{equation}
 
-Where winding order is used to specify face direction.
+The \textbf{winding order} of the three indices (clockwise or counter-clockwise when viewed from outside) specifies which face of the triangle is the front face. This is used for back-face culling: triangles facing away from the camera can be discarded before shading.
 
-Each index refers to a vertex:
+Each index refers to a vertex in the shared buffer:
 
 \begin{equation}
     \triangle_k = (\mathbf{v}_{i_a}, \mathbf{v}_{i_b}, \mathbf{v}_{i_c})
@@ -366,32 +393,25 @@ Then:
     \text{indexed size} = 12 \cdot n_v + 12 \cdot n_t
 \end{equation}
 
-(assuming 32-bit indices)
+(assuming 32-bit indices, 4 bytes each, 3 per triangle)
+
+For a typical closed mesh, $n_v \approx \frac{n_t}{2}$, so the indexed format uses roughly $12 \cdot \frac{n_t}{2} + 12 \cdot n_t = 18 n_t$ bytes versus $36 n_t$, a $2\times$ saving in vertex data, plus the GPU's post-transform vertex cache can avoid re-transforming shared vertices.
 
 \subsection{Meshes (Objects)}
 
-A \textbf{mesh} (object) consists of:
-
-\begin{itemize}
-    \item A vertex buffer $V$
-    \item An index buffer $F$
-\end{itemize}
+A \textbf{mesh} (object) groups a vertex buffer and an index buffer into a single logical unit:
 
 \begin{equation}
     \mathcal{M} = (V, F)
 \end{equation}
 
-The mesh is defined in \textbf{local (object) space}, meaning:
+The mesh is defined in \textbf{local (object) space}, a coordinate system attached to the object itself. All vertices are expressed relative to the object's own origin, which is usually placed at a convenient point (the centre of mass, the base, etc.):
 
 \begin{equation}
-    \mathbf{v}_{local} \in \mathbb{R}^3
+    \mathbf{v}_{local} \in \mathbb{R}^3, \quad \mathbf{o}_{local} = (0,0,0)
 \end{equation}
 
-All vertices are expressed relative to the object's origin:
-
-\begin{equation}
-    \mathbf{o}_{local} = (0,0,0)
-\end{equation}
+Defining meshes in local space is practical: an artist models the object in isolation without worrying about where it will appear in the final scene. The object's position, orientation, and scale in the world are specified separately by a transformation matrix (Section~\ref{sec:coordinate-systems}).
 
 
 \subsection{Scenes as Collections of Objects}
@@ -402,7 +422,7 @@ A \textbf{scene} consists of multiple objects:
     \mathcal{S} = \{\mathcal{M}_1, \mathcal{M}_2, \dots, \mathcal{M}_k\}
 \end{equation}
 
-Each object has an associated transformation:
+Each object has an associated $4 \times 4$ \textbf{model matrix} encoding its position, orientation, and scale in the shared world coordinate system:
 
 \begin{equation}
     M_i \in \mathbb{R}^{4 \times 4}
@@ -414,9 +434,11 @@ which maps local coordinates to world coordinates:
     \mathbf{v}_{world} = M_i \mathbf{v}_{local}
 \end{equation}
 
+This separation is powerful: the same mesh can appear many times in a scene (trees in a forest, bullets in a game) simply by associating different model matrices with the same $(V, F)$ data, a technique called \textbf{instancing}.
+
 \paragraph{Global Interpretation:}
 
-All objects share a common coordinate system:
+All objects share a common world coordinate system:
 
 \begin{equation}
     \mathbf{v}_{world} \in \mathbb{R}^3
@@ -443,13 +465,11 @@ Each component ultimately reduces to:
 
 \section{Basis Vectors and Coordinate Consistency}
 
-All vector and matrix operations in graphics implicitly depend on a chosen basis. Understanding how basis vectors are represented and transformed is essential for interpreting coordinate systems and transformation pipelines.
+All vector and matrix operations in graphics implicitly depend on a chosen basis. Understanding how basis vectors are represented and transformed is essential for interpreting coordinate systems and transformation pipelines. This section makes the implicit explicit: every set of coordinates is only meaningful relative to a reference frame.
 
 \subsection{Implicit Basis in Matrix Representations}
 
-Any vector is expressed relative to a basis.
-
-Let a basis be:
+A \textbf{basis} is a set of linearly independent vectors that span a vector space. In 3D, we need three basis vectors. Coordinates are then the scalar multiples needed to reconstruct a vector from those basis vectors:
 
 \begin{equation}
     \mathcal{B} = \{\mathbf{e}_1, \mathbf{e}_2, \mathbf{e}_3\}
@@ -461,7 +481,7 @@ Then a vector $\mathbf{v}$ is written as:
     \mathbf{v} = x \mathbf{e}_1 + y \mathbf{e}_2 + z \mathbf{e}_3
 \end{equation}
 
-In coordinate form:
+In coordinate form, the components $(x, y, z)$ are specific to the basis $\mathcal{B}$:
 
 \begin{equation}
     [\mathbf{v}]_{\mathcal{B}} =
@@ -474,7 +494,7 @@ In coordinate form:
 
 \paragraph{Key Insight:}
 
-The components $(x, y, z)$ have meaning only with respect to a basis.
+The components $(x, y, z)$ have meaning only with respect to a basis. The same vector $\mathbf{v}$ will have different numerical coordinates if measured in a different basis. This is why changing coordinate systems changes the numbers even though the underlying geometry is unchanged:
 
 \begin{equation}
     \text{Coordinates} \neq \text{Vector} \quad \text{(without basis)}
@@ -482,7 +502,7 @@ The components $(x, y, z)$ have meaning only with respect to a basis.
 
 \paragraph{Matrices Encode Bases:}
 
-A matrix can be interpreted as a set of basis vectors:
+A matrix transforms vectors by describing what happens to the basis vectors themselves. The columns of a transformation matrix are exactly the images of the standard basis vectors under the transformation. If the standard basis vectors $\mathbf{e}_1, \mathbf{e}_2, \mathbf{e}_3$ are mapped to $\mathbf{c}_1, \mathbf{c}_2, \mathbf{c}_3$ respectively, then:
 
 \begin{equation}
     M =
@@ -493,17 +513,17 @@ A matrix can be interpreted as a set of basis vectors:
     \end{bmatrix}
 \end{equation}
 
-where each column $\mathbf{c}_i$ represents a transformed basis vector.
-
-Thus:
+where each column $\mathbf{c}_i$ represents a transformed basis vector. This follows directly from the definition of matrix--vector multiplication:
 
 \begin{equation}
     M \mathbf{e}_i = \mathbf{c}_i
 \end{equation}
 
+To find where any vector goes under $M$, we decompose it in the basis and linearly combine the column images. Reading a transformation matrix is therefore equivalent to reading off its three column vectors and asking: ``where do the three coordinate axes go?''
+
 \subsection{Consistency of Basis in Matrix Multiplication}
 
-Matrix multiplication is only valid when all operands are expressed in a consistent basis.
+Matrix multiplication is only valid when all operands are expressed in a consistent basis. Mixing coordinate systems without an explicit change-of-basis step is one of the most common sources of errors in graphics programming.
 
 Given:
 
@@ -511,7 +531,7 @@ Given:
     \mathbf{v}' = M \mathbf{v}
 \end{equation}
 
-this implies:
+this implies that both $M$ and $\mathbf{v}$ are expressed in the \emph{same} basis $\mathcal{B}$:
 
 \begin{equation}
     [\mathbf{v}]_{\mathcal{B}} \rightarrow [\mathbf{v}']_{\mathcal{B}}
@@ -521,7 +541,7 @@ Both $\mathbf{v}$ and $M$ must be defined relative to the same basis $\mathcal{B
 
 \paragraph{Composition of Transformations:}
 
-For two transformations:
+For two transformations applied in sequence:
 
 \begin{equation}
     \mathbf{v}'' = M_2 M_1 \mathbf{v}
@@ -533,7 +553,7 @@ the intermediate result:
     \mathbf{v}' = M_1 \mathbf{v}
 \end{equation}
 
-must be expressed in the same coordinate system expected by $M_2$.
+must be expressed in the same coordinate system that $M_2$ expects as input. Concretely, if $M_1$ transforms from local space to world space, then $M_2$ must be a matrix that operates on world-space vectors.
 
 \paragraph{Key Constraint:}
 
@@ -541,6 +561,7 @@ must be expressed in the same coordinate system expected by $M_2$.
     M_2 \cdot M_1 \quad \text{is valid only if their bases are aligned}
 \end{equation}
 
+In graphics, this constraint is satisfied by carefully tracking which space each matrix operates in (local, world, camera, etc.) and ensuring that each matrix in a chain maps from the output space of the previous matrix.
 
 \subsection{Local vs World Basis Interpretation}
 
@@ -548,12 +569,14 @@ In graphics, different spaces correspond to different bases.
 
 \paragraph{Local Basis:}
 
+Each mesh is defined in its own local coordinate system:
+
 \begin{equation}
     \mathcal{B}_{local} =
     \{\mathbf{e}_x^{local}, \mathbf{e}_y^{local}, \mathbf{e}_z^{local}\}
 \end{equation}
 
-Vertices are expressed as:
+Vertex positions are expressed as:
 
 \begin{equation}
     [\mathbf{v}]_{local}
@@ -561,12 +584,14 @@ Vertices are expressed as:
 
 \paragraph{World Basis:}
 
+All objects share a single global coordinate system:
+
 \begin{equation}
     \mathcal{B}_{world} =
     \{\mathbf{e}_x^{world}, \mathbf{e}_y^{world}, \mathbf{e}_z^{world}\}
 \end{equation}
 
-The model matrix maps between these:
+The model matrix maps between these two bases. Its columns tell us where the local axes point when the object is placed in the world:
 
 \begin{equation}
     \mathbf{v}_{world} = M_{model} \mathbf{v}_{local}
@@ -585,12 +610,11 @@ The model matrix maps between these:
     \end{bmatrix}
 \end{equation}
 
-Each column describes how a local basis vector is expressed in world coordinates.
-
+Each column describes how a local basis vector is expressed in world coordinates. If the model matrix is the identity, the local and world axes coincide. A rotation matrix rotates the local axes; a scale matrix stretches them; a translation shifts the origin.
 
 \subsection{Transform Chains as Basis Transitions}
 
-The full graphics pipeline can be interpreted as a sequence of basis changes:
+The full graphics pipeline can be interpreted as a sequence of basis changes. Each transformation matrix re-expresses vertex coordinates in a new frame of reference:
 
 \begin{equation}
     \mathbf{v}_{clip} =
@@ -600,9 +624,9 @@ The full graphics pipeline can be interpreted as a sequence of basis changes:
 Each matrix performs a change of basis:
 
 \begin{itemize}
-    \item $M_{model}$: local $\rightarrow$ world
-    \item $M_{view}$: world $\rightarrow$ camera
-    \item $M_{proj}$: camera $\rightarrow$ clip
+    \item $M_{model}$: local $\rightarrow$ world (place object in scene)
+    \item $M_{view}$: world $\rightarrow$ camera (move world so camera is at origin)
+    \item $M_{proj}$: camera $\rightarrow$ clip (apply perspective distortion)
 \end{itemize}
 
 Thus:
@@ -619,7 +643,7 @@ Thus:
 
 \paragraph{Key Insight:}
 
-Matrix multiplication composes basis transformations:
+Because matrix multiplication is associative, the three matrices can be pre-multiplied into a single \textbf{combined transform matrix}:
 
 \begin{equation}
     M_{total} = M_{proj} \cdot M_{view} \cdot M_{model}
@@ -631,14 +655,15 @@ so that:
     \mathbf{v}_{clip} = M_{total} \mathbf{v}_{local}
 \end{equation}
 
+This pre-multiplication is done on the CPU once per object per frame, and the single matrix $M_{total}$ is then passed to the vertex shader, which applies it to every vertex. This avoids repeating the multiplication of all three matrices for each of the potentially millions of vertices in the scene.
 
 \subsection{Conceptual Summary}
 
 \begin{itemize}
-    \item Every vector is defined relative to a basis
-    \item Every matrix encodes a transformation of basis vectors
-    \item Matrix multiplication composes consistent basis transformations
-    \item The graphics pipeline is a sequence of basis changes
+    \item Every vector is defined relative to a basis; coordinates are meaningless without one
+    \item Every matrix encodes a transformation of basis vectors, readable from its columns
+    \item Matrix multiplication composes consistent basis transformations --- the output space of one matrix must match the input space of the next
+    \item The graphics pipeline is a sequence of basis changes, each serving a distinct geometric purpose
 \end{itemize}
 
 \begin{equation}
@@ -650,8 +675,9 @@ so that:
 \end{equation}
 
 \section{Coordinate Systems and Spaces}
+\label{sec:coordinate-systems}
 
-In computer graphics, geometry is transformed through a sequence of coordinate systems. Each space provides a different frame of reference for interpreting vertex positions.
+In computer graphics, geometry is transformed through a sequence of coordinate systems. Each space provides a different frame of reference for interpreting vertex positions, and each stage of the transformation pipeline serves a specific geometric purpose. The full sequence is:
 
 \begin{equation}
     \mathbf{v}_{local}
@@ -670,7 +696,7 @@ In computer graphics, geometry is transformed through a sequence of coordinate s
 
 \subsection{Local (Object) Space}
 
-Local space (or object space) is the coordinate system in which a mesh is originally defined.
+Local space (or object space) is the coordinate system in which a mesh is originally defined. It is the most convenient space for the artist or programmer who is building the mesh, since the object can be modelled symmetrically around its own origin without worrying about its eventual position in the scene.
 
 \begin{equation}
     \mathbf{v}_{local} =
@@ -685,36 +711,35 @@ Local space (or object space) is the coordinate system in which a mesh is origin
 Key properties:
 
 \begin{itemize}
-    \item Origin is the object's center:
+    \item Origin is the object's centre (or a chosen reference point):
     \begin{equation}
         \mathbf{o}_{local} = (0,0,0)
     \end{equation}
-    \item Basis vectors define the object's orientation:
+    \item Basis vectors define the object's natural orientation (e.g.\ $+y$ is ``up'' for the object):
     \begin{equation}
         \{\mathbf{e}_x^{local}, \mathbf{e}_y^{local}, \mathbf{e}_z^{local}\}
     \end{equation}
 \end{itemize}
 
-Vertices are stored in this space in memory.
-
+Vertices are stored in this space in memory. When the same mesh is reused at multiple positions (instancing), it is stored once in local space, and different model matrices place copies of it throughout the scene.
 
 \subsection{World Space}
 
-World space is a global coordinate system shared by all objects in the scene.
+World space is a global coordinate system shared by all objects in the scene. It is the ``ground truth'' reference frame: positions of lights, cameras, and collision volumes are all expressed here.
 
-Each object is placed into world space using a model transformation:
+Each object is placed into world space using the \textbf{model transformation}:
 
 \begin{equation}
     \mathbf{v}_{world} = M_{model} \mathbf{v}_{local}
 \end{equation}
 
-where:
+The model matrix decomposes into scale ($S$), rotation ($R$), and translation ($T$) applied in that order:
 
 \begin{equation}
     M_{model} = T \cdot R \cdot S
 \end{equation}
 
-Explicitly:
+The order matters because these operations do not commute. Scaling first, then rotating, then translating is the conventional order: it scales around the object's own origin, rotates the scaled object, then moves it to its world position. Explicitly, the combined matrix is:
 
 \begin{equation}
     M_{model} =
@@ -726,11 +751,13 @@ Explicitly:
     \end{bmatrix}
 \end{equation}
 
+where $r_{ij}$ are the entries of the rotation matrix $R$ and $S_x, S_y, S_z$ are the scale factors along each axis.
+
 Key properties:
 
 \begin{itemize}
-    \item Common reference frame for all objects
-    \item Fixed global basis:
+    \item Common reference frame for all objects, lighting calculations and inter-object interactions happen here
+    \item Fixed global basis, conventionally right-handed with $+y$ pointing up:
     \begin{equation}
         \{\mathbf{e}_x^{world}, \mathbf{e}_y^{world}, \mathbf{e}_z^{world}\}
     \end{equation}
@@ -739,21 +766,21 @@ Key properties:
 
 \subsection{Camera (View) Space}
 
-Camera space (or view space) represents coordinates relative to the camera.
+Camera space (or view space) represents coordinates relative to the camera. In this frame, the camera is always at the origin, looking along the negative $z$-axis, with $+y$ pointing upward. This canonical placement simplifies the perspective projection step that follows.
 
-Instead of moving the camera, we transform the world:
+The key insight is that we do not move the camera to look at the scene, we keep the camera fixed (at the origin) and \emph{move the entire world} in the opposite direction so that the scene appears as if viewed from the camera's position. The \textbf{view matrix} implements this inverse camera transform:
 
 \begin{equation}
     \mathbf{v}_{camera} = M_{view} \mathbf{v}_{world}
 \end{equation}
 
-The view matrix is the inverse of the camera transform:
+The view matrix is the inverse of the camera's world transform:
 
 \begin{equation}
     M_{view} = (T_{cam} R_{cam})^{-1}
 \end{equation}
 
-If the camera has position $\mathbf{c}$ and rotation $R_{cam}$:
+For a camera at position $\mathbf{c}$ with rotation $R_{cam}$, the inverse can be computed in closed form. Because rotation matrices are orthogonal ($R^{-1} = R^T$):
 
 \begin{equation}
     M_{view} =
@@ -763,6 +790,8 @@ If the camera has position $\mathbf{c}$ and rotation $R_{cam}$:
     \end{bmatrix}
 \end{equation}
 
+The $-R_{cam}^T \mathbf{c}$ term translates the world so the camera ends up at the origin: it first undoes the camera's rotation, then translates by the negated (rotated) camera position.
+
 Key properties:
 
 \begin{itemize}
@@ -770,19 +799,19 @@ Key properties:
     \begin{equation}
         \mathbf{o}_{camera} = (0,0,0)
     \end{equation}
-    \item Viewing direction typically along negative z-axis
+    \item Viewing direction along negative $z$-axis (a convention chosen so that $z$ decreases with depth, which aligns naturally with a right-handed coordinate system)
 \end{itemize}
 
 
 \subsection{Clip Space}
 
-Clip space is obtained by applying the projection matrix:
+Clip space is obtained by applying the \textbf{projection matrix}, which encodes the camera's field of view and depth range. The purpose of clip space is to bring all geometry that should be visible into a canonical volume, making it easy to test whether geometry is within the view frustum and to perform perspective division.
 
 \begin{equation}
     \mathbf{v}_{clip} = M_{proj} \mathbf{v}_{camera}
 \end{equation}
 
-A standard perspective projection matrix is:
+A standard \textbf{perspective projection matrix} is:
 
 \begin{equation}
     M_{proj} =
@@ -797,8 +826,10 @@ A standard perspective projection matrix is:
 where:
 
 \begin{equation}
-    a = \text{aspect ratio}, \quad n = \text{near plane}, \quad f = \text{far plane} \quad \mathrm{fov} = \mathrm{field\ of\ view}
+    a = \text{aspect ratio}, \quad n = \text{near plane}, \quad f = \text{far plane}, \quad \mathrm{fov} = \mathrm{field\ of\ view}
 \end{equation}
+
+The $-1$ in the bottom row is key: it copies the negative $z_{camera}$ value into the $w$ component of the output. When we later divide by $w$ (the perspective divide), points farther from the camera are divided by a larger value, making them appear smaller, this is precisely the perspective effect.
 
 Vertices in clip space are 4D:
 
@@ -812,10 +843,11 @@ Vertices in clip space are 4D:
     \end{bmatrix}
 \end{equation}
 
+Geometry that lies outside the view frustum satisfies $|x_c| > w_c$, $|y_c| > w_c$, or $|z_c| > w_c$, and is \textbf{clipped} (discarded or trimmed) at this stage.
 
 \subsection{Normalized Device Coordinates (NDC)}
 
-To obtain normalized device coordinates, perform the perspective divide:
+To obtain normalized device coordinates, the GPU performs the \textbf{perspective divide}, dividing each component by $w_c$:
 
 \begin{equation}
     \mathbf{v}_{ndc} =
@@ -826,25 +858,27 @@ To obtain normalized device coordinates, perform the perspective divide:
     \end{bmatrix}
 \end{equation}
 
-This maps coordinates into a canonical cube:
+This maps all visible geometry into a canonical cube:
 
 \begin{equation}
     x, y, z \in [-1, 1]
 \end{equation}
 
+The perspective divide is what creates the visual perspective effect: a point at depth $z_{cam} = -2$ is divided by $w_c = 2$, halving its $x$ and $y$ extents and making it appear half as large as an equivalent point at depth $z_{cam} = -1$.
+
 Key properties:
 
 \begin{itemize}
-    \item Removes perspective distortion via division by $w$
-    \item Enables uniform clipping and rasterization
+    \item Removes perspective distortion via division by $w$: NDC $x$ and $y$ are linearly related to horizontal and vertical screen position
+    \item Enables uniform clipping and rasterization: all subsequent stages work in this device-independent coordinate system regardless of resolution or aspect ratio
 \end{itemize}
 
 
 \subsection{Screen Space}
 
-Screen space maps normalized coordinates to pixel coordinates.
+Screen space maps normalized device coordinates to pixel coordinates on the display. This is the \textbf{viewport transform}, controlled by the application's viewport settings.
 
-For a viewport of width $W$ and height $H$:
+For a viewport of width $W$ pixels and height $H$ pixels:
 
 \begin{equation}
     x_{screen} = \frac{W}{2} (x_{ndc} + 1)
@@ -857,6 +891,8 @@ For a viewport of width $W$ and height $H$:
 \begin{equation}
     z_{screen} = \frac{1}{2}(z_{ndc} + 1)
 \end{equation}
+
+Note that the $y$ formula inverts the axis: in NDC, $+y$ points upward, but screen coordinates traditionally have $+y$ pointing downward (row 0 at the top). The $z$ value is remapped from $[-1, 1]$ to $[0, 1]$ for storage in the depth buffer.
 
 Final screen coordinate:
 
@@ -882,11 +918,13 @@ The full transformation pipeline is:
     \mathbf{v}_{local}
 \end{equation}
 
-Followed by:
+Followed by the hardware-performed perspective divide:
 
 \begin{equation}
     \mathbf{v}_{ndc} = \frac{1}{w} \mathbf{v}_{clip}
 \end{equation}
+
+And finally the viewport transform:
 
 \begin{equation}
     \mathbf{v}_{screen} = \text{Viewport}(\mathbf{v}_{ndc})
@@ -894,24 +932,26 @@ Followed by:
 
 \subsection{Conceptual Interpretation}
 
-Each transformation corresponds to a change of coordinate system:
+Each transformation corresponds to a change of coordinate system, each chosen so that the \emph{next} stage's computation becomes simpler:
 
 \begin{equation}
     \text{Local} \rightarrow \text{World} \rightarrow \text{Camera} \rightarrow \text{Clip} \rightarrow \text{Screen}
 \end{equation}
 
-At every stage:
-
 \begin{itemize}
-    \item Coordinates are expressed relative to a specific basis
-    \item Matrix multiplication re-expresses vectors in a new basis
+    \item \textbf{Local}: convenient for modelling the mesh
+    \item \textbf{World}: convenient for scene assembly and lighting
+    \item \textbf{Camera}: convenient for perspective projection (camera at origin)
+    \item \textbf{Clip/NDC}: convenient for clipping and rasterization (uniform $[-1,1]$ cube)
+    \item \textbf{Screen}: pixel coordinates for the rasterizer
 \end{itemize}
 
-Thus, the entire graphics pipeline can be viewed as a sequence of basis transformations applied to vertex data.
+The entire graphics pipeline can be viewed as a sequence of basis transformations, each applied to all vertex data, ultimately mapping 3D geometry to a 2D image on screen.
 
 \section{Rasterization}
+\label{sec:rasterization}
 
-Rasterization is the process of converting geometric primitives (triangles) into discrete pixels on the screen.
+Rasterization is the process of converting geometric primitives (triangles) into discrete pixels on the screen. It is the defining algorithm of real-time graphics: rather than tracing rays from the camera (as in ray tracing), rasterization projects triangles forward onto the image plane and determines which pixels they cover.
 
 Given vertices in screen space:
 
@@ -921,10 +961,12 @@ Given vertices in screen space:
     \mathbf{v}_2 = (x_2, y_2, z_2)
 \end{equation}
 
-the goal is to determine which pixels lie inside the triangle and compute their attributes.
+the goal is to determine which pixels lie inside the triangle and compute their attributes (colour, depth, texture coordinates) at each pixel.
 
 
 \subsection{Triangle Setup}
+
+The rasterizer works by iterating over all pixels in the bounding box of the triangle and testing each one for inclusion. Rather than solving the general point-in-triangle problem from scratch for each pixel, a set of \textbf{edge functions} is precomputed that allow this test to be performed with three comparisons and evaluated incrementally across scanlines.
 
 A triangle is defined by three vertices in screen space:
 
@@ -932,16 +974,16 @@ A triangle is defined by three vertices in screen space:
     \triangle = (\mathbf{v}_0, \mathbf{v}_1, \mathbf{v}_2)
 \end{equation}
 
-We define edge functions to determine whether a point lies inside the triangle.
-
-For a point $\mathbf{p} = (x, y)$, define:
+For a point $\mathbf{p} = (x, y)$, the edge function between vertices $i$ and $j$ is defined as:
 
 \begin{equation}
     E_{ij}(\mathbf{p}) =
     (x - x_i)(y_j - y_i) - (y - y_i)(x_j - x_i)
 \end{equation}
 
-A point is inside the triangle if:
+This is the $z$-component of the cross product of the edge vector $(\mathbf{v}_j - \mathbf{v}_i)$ with the vector from vertex $i$ to $\mathbf{p}$. Its sign encodes which side of the directed edge $\overrightarrow{v_i v_j}$ the point lies on: positive on the left, negative on the right.
+
+A point is inside a counter-clockwise wound triangle if and only if it is to the left of all three directed edges:
 
 \begin{equation}
     E_{01}(\mathbf{p}) \ge 0, \quad
@@ -953,12 +995,13 @@ A point is inside the triangle if:
 
 \paragraph{Interpretation:}
 
-Each edge function represents a signed area test.
-
+Each edge function represents a signed area test. The value $E_{ij}(\mathbf{p})$ is twice the signed area of the triangle formed by $\mathbf{v}_i$, $\mathbf{v}_j$, and $\mathbf{p}$. All three being non-negative means $\mathbf{p}$ lies inside the triangle.
 
 \subsection{Barycentric Coordinates}
 
-Any point inside the triangle can be expressed as a weighted combination of the vertices:
+Once we know a pixel centre $\mathbf{p}$ is inside the triangle, we need to interpolate per-vertex data. \textbf{Barycentric coordinates} provide exactly the right weights for this interpolation.
+
+Any point inside the triangle can be expressed as a weighted combination of the vertices, with weights that sum to one:
 
 \begin{equation}
     \mathbf{p} = \alpha \mathbf{v}_0 + \beta \mathbf{v}_1 + \gamma \mathbf{v}_2
@@ -970,7 +1013,7 @@ with:
     \alpha + \beta + \gamma = 1
 \end{equation}
 
-The barycentric coordinates can be computed using areas:
+The weights have an elegant geometric interpretation in terms of areas. The barycentric coordinate $\alpha$ (associated with $\mathbf{v}_0$) equals the fraction of the total triangle area that the sub-triangle $(\mathbf{p}, \mathbf{v}_1, \mathbf{v}_2)$ occupies:
 
 \begin{equation}
     \alpha = \frac{A(\mathbf{p}, \mathbf{v}_1, \mathbf{v}_2)}{A(\mathbf{v}_0, \mathbf{v}_1, \mathbf{v}_2)}
@@ -984,7 +1027,7 @@ The barycentric coordinates can be computed using areas:
     \gamma = \frac{A(\mathbf{v}_0, \mathbf{v}_1, \mathbf{p})}{A(\mathbf{v}_0, \mathbf{v}_1, \mathbf{v}_2)}
 \end{equation}
 
-where:
+where the signed area of a triangle is:
 
 \begin{equation}
     A(\mathbf{a}, \mathbf{b}, \mathbf{c}) =
@@ -996,44 +1039,60 @@ where:
     \end{vmatrix}
 \end{equation}
 
+Conveniently, the barycentric coordinates can be read directly from the edge functions: $\alpha$, $\beta$, $\gamma$ are proportional to $E_{12}(\mathbf{p})$, $E_{20}(\mathbf{p})$, $E_{01}(\mathbf{p})$ respectively, so the inside test and the coordinate computation share the same arithmetic.
+
 \subsection{Interpolation Across Surfaces}
 
-Once barycentric coordinates are known, any vertex attribute can be interpolated.
+Once barycentric coordinates are known, any per-vertex attribute can be interpolated to obtain a smooth value at pixel $\mathbf{p}$.
 
-Let $q$ be a per-vertex attribute (e.g. depth, color, texture coordinate):
+Let $q$ be a per-vertex attribute (e.g.\ depth, colour, normal, or texture coordinate):
 
 \begin{equation}
     q_0, \quad q_1, \quad q_2
 \end{equation}
 
-Then:
+The interpolated value is the barycentric-weighted combination:
 
 \begin{equation}
     q(\mathbf{p}) = \alpha q_0 + \beta q_1 + \gamma q_2
 \end{equation}
 
+This gives a value that varies linearly across the triangle and matches each vertex value exactly at the corresponding corner.
+
 \paragraph{Important: Perspective-Correct Interpolation}
 
-Due to perspective projection, interpolation must be corrected using $w$:
+Naively interpolating in screen space gives the wrong result when the triangle is viewed under perspective projection. The problem is that screen-space barycentric coordinates correspond to linear interpolation in 2D screen space, but the geometry was projected non-linearly: points farther from the camera were divided by a larger $w$. Equal steps in screen space do not correspond to equal steps along the 3D surface.
+
+The fix is to interpolate the attribute divided by $w$ (which \emph{is} linear in screen space after the perspective divide), then undo the division:
 
 \begin{equation}
     q' = \frac{q}{w}
 \end{equation}
 
-Interpolate:
+Interpolate $q'$ using screen-space barycentric coordinates:
 
 \begin{equation}
     q'(\mathbf{p}) = \alpha q'_0 + \beta q'_1 + \gamma q'_2
 \end{equation}
 
-Then recover:
+Also interpolate $\frac{1}{w}$:
+
+\begin{equation}
+    \frac{1}{w(\mathbf{p})} = \alpha \frac{1}{w_0} + \beta \frac{1}{w_1} + \gamma \frac{1}{w_2}
+\end{equation}
+
+Then recover the correct attribute value by dividing:
 
 \begin{equation}
     q(\mathbf{p}) =
     \frac{q'(\mathbf{p})}{\alpha \frac{1}{w_0} + \beta \frac{1}{w_1} + \gamma \frac{1}{w_2}}
 \end{equation}
 
+Without this correction, texture mapping on a perspective-projected surface appears distorted: straight lines in texture space would appear as curves on screen. Modern GPUs perform this correction automatically.
+
 \subsection{Depth Testing (Z-Buffer)}
+
+Multiple triangles may project to the same pixel, but only the closest one should be visible. The \textbf{depth buffer} (or z-buffer) resolves this by storing the depth of the closest fragment seen so far at each pixel.
 
 Each pixel stores a depth value:
 
@@ -1041,7 +1100,7 @@ Each pixel stores a depth value:
     z_{\text{buffer}}(x,y)
 \end{equation}
 
-For a candidate fragment with depth $z_{\text{new}}$:
+The buffer is initialised to the maximum depth (1.0) at the start of each frame. For each fragment produced by rasterization, with depth $z_{\text{new}}$:
 
 \begin{equation}
     z_{\text{new}} < z_{\text{buffer}}(x,y)
@@ -1049,7 +1108,7 @@ For a candidate fragment with depth $z_{\text{new}}$:
     \text{fragment is visible}
 \end{equation}
 
-If true:
+If the test passes, the buffer and colour are updated:
 
 \begin{equation}
     z_{\text{buffer}}(x,y) \leftarrow z_{\text{new}}
@@ -1059,11 +1118,11 @@ If true:
     \text{color}(x,y) \leftarrow \text{fragment color}
 \end{equation}
 
-Otherwise, the fragment is discarded.
+Otherwise, the fragment is discarded: a closer fragment has already been written here.
 
 \paragraph{Depth Range:}
 
-After projection:
+After the viewport transform, depth values are in:
 
 \begin{equation}
     z \in [0,1]
@@ -1071,13 +1130,13 @@ After projection:
 
 \paragraph{Non-linearity:}
 
-Depth is non-linear with respect to camera distance:
+Depth is non-linear with respect to camera distance because of the perspective projection. The mapping from camera-space $z$ to buffer depth is approximately:
 
 \begin{equation}
     z \sim \frac{1}{z_{camera}}
 \end{equation}
 
-This provides higher precision near the camera.
+This means depth values are compressed for distant geometry and expanded for nearby geometry. As a result, more depth buffer precision is allocated near the camera (where small depth differences matter more) and less is allocated far away. However, placing the near plane very close to the camera compresses most geometry into a very small range of depth values near $z = 1$, causing \textbf{z-fighting} (flickering between two surfaces at similar depth).
 
 \subsection{Summary}
 
@@ -1090,30 +1149,26 @@ Rasterization converts triangles into pixels through:
 Key steps:
 
 \begin{itemize}
-    \item Determine pixel coverage (edge functions)
-    \item Compute barycentric coordinates
-    \item Interpolate attributes
-    \item Perform depth testing
+    \item Determine pixel coverage using edge functions (inside-triangle test)
+    \item Compute barycentric coordinates for each covered pixel
+    \item Interpolate attributes (with perspective correction) across the surface
+    \item Perform depth testing to resolve visibility between overlapping triangles
 \end{itemize}
 
-Thus, rasterization bridges continuous geometry and discrete image representation.
+Rasterization is the bridge between the continuous mathematical description of a 3D scene and its discrete representation as a 2D array of pixels.
 
 \section{Lighting and Surface Shading}
+
+Rasterization tells us which pixel each surface fragment maps to, but not what colour it should be. Lighting models determine the apparent brightness and colour of a surface based on its orientation relative to light sources, the material properties of the surface, and the viewer's position. The simplest physically-motivated model is Lambertian (diffuse) shading.
 
 Lighting determines how surfaces appear based on their orientation relative to light sources. The fundamental quantity governing lighting is the \textbf{surface normal}.
 
 
 \subsection{Surface Normals}
 
-A surface normal is a unit vector perpendicular to a surface.
+A surface normal is a unit vector perpendicular to a surface. Intuitively, it encodes the orientation of the surface: a horizontal floor has a normal pointing straight up; a vertical wall has a normal pointing horizontally. Lighting is computed as a function of the angle between the normal and the light direction.
 
-For a triangle with vertices:
-
-\begin{equation}
-    \mathbf{v}_0, \quad \mathbf{v}_1, \quad \mathbf{v}_2
-\end{equation}
-
-two edge vectors are:
+For a triangle with vertices $\mathbf{v}_0, \mathbf{v}_1, \mathbf{v}_2$, two edge vectors lying in the plane of the triangle are:
 
 \begin{equation}
     \mathbf{e}_1 = \mathbf{v}_1 - \mathbf{v}_0
@@ -1123,33 +1178,39 @@ two edge vectors are:
     \mathbf{e}_2 = \mathbf{v}_2 - \mathbf{v}_0
 \end{equation}
 
-The normal is:
+The normal is their cross product, which is perpendicular to both edges and hence to the triangle plane:
 
 \begin{equation}
     \mathbf{n} = \mathbf{e}_1 \times \mathbf{e}_2
 \end{equation}
 
-Normalized:
+Normalized to unit length for use in lighting calculations:
 
 \begin{equation}
     \hat{\mathbf{n}} = \frac{\mathbf{n}}{\|\mathbf{n}\|}
 \end{equation}
 
+The direction of $\hat{\mathbf{n}}$ follows from the right-hand rule applied to the vertex winding order: for a counter-clockwise winding when viewed from outside, the normal points outward.
+
 
 \subsection{Light Direction}
 
-A directional light is defined by a unit vector:
+A \textbf{directional light} (such as the sun, which is so distant that all its rays are approximately parallel) is defined by a single unit vector:
 
 \begin{equation}
     \hat{\mathbf{l}} \in \mathbb{R}^3
 \end{equation}
 
-pointing from the surface toward the light source.
+pointing \emph{from the surface toward the light source} (not toward the surface, this sign convention ensures the dot product with the normal is positive for illuminated surfaces).
 
 
 \subsection{Diffuse Lighting (Lambertian Reflection)}
 
-The simplest lighting model assumes brightness depends on the angle between the surface normal and light direction.
+The simplest and most physically-grounded lighting model is \textbf{Lambertian} (diffuse) reflection, which describes matte surfaces that scatter incoming light equally in all directions. The key physical insight is \textbf{Lambert's cosine law}: the amount of light striking a surface element depends on the cosine of the angle between the surface normal and the light direction.
+
+Intuitively, when light hits a surface at a grazing angle (large $\theta$), the same beam of light is spread over a larger area, reducing the irradiance (power per unit area) by a factor of $\cos\theta$. When light hits perpendicularly ($\theta = 0$), irradiance is maximised.
+
+The Lambertian intensity is:
 
 \begin{equation}
     I = k_d \cdot \max(0, \hat{\mathbf{n}} \cdot \hat{\mathbf{l}})
@@ -1157,11 +1218,13 @@ The simplest lighting model assumes brightness depends on the angle between the 
 
 where:
 \begin{itemize}
-    \item $I$ is the intensity
-    \item $k_d$ is the diffuse reflectance coefficient
+    \item $I$ is the reflected intensity (proportional to pixel brightness)
+    \item $k_d \in [0, 1]$ is the \textbf{diffuse reflectance coefficient}, encoding how much light the material reflects (0 = completely black; 1 = perfectly white matte surface)
 \end{itemize}
 
 \paragraph{Geometric Interpretation:}
+
+The dot product of two unit vectors equals the cosine of the angle between them:
 
 \begin{equation}
     \hat{\mathbf{n}} \cdot \hat{\mathbf{l}} = \cos\theta
@@ -1179,32 +1242,34 @@ Thus:
     \max(0, \cdot)
 \end{equation}
 
-ensures that surfaces facing away from the light receive no illumination.
+ensures that surfaces facing away from the light (where $\hat{\mathbf{n}} \cdot \hat{\mathbf{l}} < 0$, i.e.\ $\theta > 90°$) receive no direct illumination. Without clamping, back-facing surfaces would be ``negatively lit'', which has no physical meaning.
 
 
 \subsection{Ambient Lighting}
 
-Ambient lighting approximates indirect illumination:
+In reality, light bounces off multiple surfaces before reaching the eye, so even surfaces not directly facing a light source receive some indirect illumination. Accurately simulating this global illumination is expensive. \textbf{Ambient lighting} is a simple approximation: a constant, direction-independent base illumination added to every surface:
 
 \begin{equation}
     I_{ambient} = k_a
 \end{equation}
 
-where $k_a$ is a constant.
+where $k_a$ is a small constant chosen to ensure that shadowed surfaces are not completely black. It is a crude approximation, a uniform ``fill light'' with no geometric basis, but it prevents the extreme contrast that would result from purely Lambertian shading.
 
 
 \subsection{Combined Lighting Model}
+
+Adding ambient and diffuse contributions gives the \textbf{Lambertian shading model}:
 
 \begin{equation}
     I = k_a + k_d \cdot \max(0, \hat{\mathbf{n}} \cdot \hat{\mathbf{l}})
 \end{equation}
 
-This is the \textbf{Lambertian shading model}.
+This is the \textbf{Lambertian shading model}. It has only two parameters ($k_a$ and $k_d$) and is extremely efficient to compute, making it suitable for real-time use. It accounts for the orientation of the surface relative to the light, but does not model specular highlights (shiny reflections), which require additional terms such as the Blinn-Phong or Cook-Torrance models.
 
 
 \subsection{Transforming Normals}
 
-Normals must be transformed correctly when objects are transformed.
+When an object is transformed (moved, rotated, scaled), its normals must also be transformed, but \emph{not} by the same matrix as the vertices. To see why, consider a non-uniform scale: if an object is stretched by a factor of 2 along $x$ but not $y$, a 45° normal would point in a different direction relative to the now-elongated surface. Applying the same scale matrix to the normal would give the wrong result.
 
 Given:
 
@@ -1212,7 +1277,7 @@ Given:
     \mathbf{v}_{world} = M_{model} \mathbf{v}_{local}
 \end{equation}
 
-Normals transform as:
+The correct transform for normals is the \textbf{inverse transpose} of the model matrix:
 
 \begin{equation}
     \mathbf{n}_{world} = (M_{model}^{-1})^T \mathbf{n}_{local}
@@ -1220,26 +1285,26 @@ Normals transform as:
 
 \paragraph{Reason:}
 
-Normals must remain perpendicular to the surface after transformation.
+Normals must remain perpendicular to the surface after transformation. A tangent vector $\mathbf{t}$ lying on the surface transforms as $\mathbf{t}' = M\mathbf{t}$. For the transformed normal $\mathbf{n}'$ to be perpendicular to $\mathbf{t}'$, we need $\mathbf{n}' \cdot \mathbf{t}' = 0$. Substituting gives the requirement $(M^{-1})^T \mathbf{n}$. If $M$ is a pure rotation or uniform scale, $(M^{-1})^T = M$ and no correction is needed, but for non-uniform scales or shears the correction is essential.
 
 
 \subsection{Basic Shadows (Visibility)}
 
-A point is in shadow if light cannot reach it.
+A point is in shadow if light cannot reach it because another object lies between it and the light source.
 
-Define a shadow ray:
+Define a \textbf{shadow ray} originating at surface point $\mathbf{p}$ in the direction of the light:
 
 \begin{equation}
     \mathbf{r}(t) = \mathbf{p} + t \hat{\mathbf{l}}
 \end{equation}
 
-If this ray intersects another object before reaching the light:
+If this ray intersects another object before reaching the light ($t > 0$):
 
 \begin{equation}
     \exists t > 0 \quad \text{s.t.} \quad \mathbf{r}(t) \in \text{scene}
 \end{equation}
 
-then:
+then the point is in shadow and receives only ambient illumination:
 
 \begin{equation}
     I = I_{ambient}
@@ -1251,49 +1316,53 @@ otherwise:
     I = k_a + k_d \cdot \max(0, \hat{\mathbf{n}} \cdot \hat{\mathbf{l}})
 \end{equation}
 
+Casting shadow rays per fragment is the approach used in ray tracing. In rasterization, shadows are instead approximated by \emph{shadow maps}.
+
 
 \subsection{Shadow Mapping (Rasterization Approximation)}
 
-In rasterization, shadows are approximated using a depth map.
+In rasterization, shadows cannot be computed with shadow rays efficiently. Instead, shadows are approximated using a \textbf{shadow map}: a depth buffer rendered from the light's point of view.
 
 \paragraph{Step 1: Render from Light's Perspective}
 
-Compute:
+Render the scene from the light's viewpoint and store the depth of the nearest surface at each texel:
 
 \begin{equation}
     z_{light}(x,y)
 \end{equation}
 
+This depth map records, for each direction from the light, the distance to the closest occluder.
+
 \paragraph{Step 2: Compare Depth}
 
-For a fragment at position $\mathbf{p}$:
+When shading a fragment at world position $\mathbf{p}$, transform $\mathbf{p}$ into the light's coordinate system and look up the stored depth. If the fragment is farther from the light than the stored depth, it is occluded:
 
 \begin{equation}
     z_{fragment} > z_{light}
-\end{equation}
-
-implies:
-
-\begin{equation}
+    \quad \Rightarrow \quad
     \text{in shadow}
 \end{equation}
+
+Shadow mapping is approximate: it introduces \textbf{shadow acne} (self-shadowing artifacts due to depth precision limits, corrected by adding a small bias) and \textbf{aliasing} (jagged shadow edges due to the finite resolution of the shadow map). Nevertheless, it is the dominant shadow technique in real-time graphics due to its simplicity and GPU-friendliness.
 
 
 \subsection{Interpolation of Normals}
 
-Normals are interpolated across the triangle:
+Per-vertex normals allow smooth shading of curved surfaces without subdividing the geometry. Instead of computing a single flat normal per triangle (which gives a faceted appearance), normals are stored per vertex representing the average surface orientation at that vertex, then interpolated across the triangle using barycentric coordinates:
 
 \begin{equation}
     \mathbf{n}(\mathbf{p}) =
     \alpha \mathbf{n}_0 + \beta \mathbf{n}_1 + \gamma \mathbf{n}_2
 \end{equation}
 
-Then normalized:
+Because the interpolated normal may no longer have unit length, it must be normalized before use in lighting:
 
 \begin{equation}
     \hat{\mathbf{n}}(\mathbf{p}) =
     \frac{\mathbf{n}(\mathbf{p})}{\|\mathbf{n}(\mathbf{p})\|}
 \end{equation}
+
+This technique is called \textbf{Phong shading} (not to be confused with the Phong specular model). It produces smooth-looking shading with no extra geometric complexity. An even simpler approach, \textbf{Gouraud shading}, computes lighting at each vertex and interpolates the final colour, but this can miss sharp specular highlights that fall between vertices.
 
 
 \subsection{Summary}
@@ -1318,17 +1387,17 @@ Thus, shading is fundamentally:
 
 \section{Memory Layout of Graphics Data}
 
-All geometric data in a graphics pipeline is ultimately stored as structured sequences of bytes in memory (CPU RAM or GPU VRAM). These structures are designed for efficient access and parallel processing.
+All geometric data in a graphics pipeline is ultimately stored as structured sequences of bytes in memory (CPU RAM or GPU VRAM). These structures must be carefully designed for efficient access and parallel processing: GPUs achieve high throughput by reading large contiguous blocks of memory simultaneously across thousands of parallel threads, so how data is laid out has a direct impact on performance.
 
 \subsection{Vertex Buffers}
 
-A \textbf{vertex buffer} stores a sequence of vertices:
+A \textbf{vertex buffer} stores a sequence of vertices as a contiguous block of floats in memory:
 
 \begin{equation}
     V = [\mathbf{v}_0, \mathbf{v}_1, \dots, \mathbf{v}_{n-1}]
 \end{equation}
 
-Each vertex typically contains multiple attributes:
+Each vertex typically contains multiple \textbf{attributes}: the position, surface normal, texture coordinates, colour, tangent vector, etc. These are packed together into a struct per vertex:
 
 \begin{equation}
     \mathbf{v}_i =
@@ -1342,18 +1411,18 @@ Each vertex typically contains multiple attributes:
 
 \paragraph{Memory Layout:}
 
-Each attribute is stored as a float (4 bytes):
+Each float attribute occupies 4 bytes. If there are $k$ float components per vertex:
 
 \begin{equation}
     \text{size of vertex} = k \cdot 4\ \text{bytes}
 \end{equation}
 
-where $k$ is the number of float components.
+This per-vertex size is called the \textbf{stride}: the number of bytes between the start of one vertex and the start of the next. The GPU uses the stride to step through the buffer when fetching vertex data.
 
 \paragraph{Example (Position Only):}
 
 \begin{equation}
-    \mathbf{v}_i = (x, y, z)
+    \mathbf{v}_i = (x, y, z), \quad k = 3
 \end{equation}
 
 \begin{equation}
@@ -1362,21 +1431,25 @@ where $k$ is the number of float components.
 
 \paragraph{Contiguous Storage:}
 
+All vertices are stored one after another with no gaps:
+
 \begin{equation}
     \text{Vertex Buffer} =
     [x_0, y_0, z_0, \; x_1, y_1, z_1, \; \dots]
 \end{equation}
 
+This \textbf{interleaved} layout (all attributes for vertex $i$ stored together before vertex $i+1$) is the most common arrangement because it maximises spatial locality: when the GPU fetches a vertex, all its attributes are in the same cache line. An alternative layout, storing all positions together, then all normals together, is called \textbf{non-interleaved}, and can be beneficial when different shader stages access different subsets of attributes.
+
 
 \subsection{Index Buffers}
 
-An \textbf{index buffer} defines how vertices form triangles.
+An \textbf{index buffer} defines how vertices are connected into triangles. Rather than storing vertex data repeatedly, the index buffer stores integer indices into the vertex buffer:
 
 \begin{equation}
     F = [(i_0, i_1, i_2), (i_3, i_4, i_5), \dots]
 \end{equation}
 
-Each index refers to a vertex in the vertex buffer:
+Each triplet of indices defines one triangle:
 
 \begin{equation}
     \triangle_k =
@@ -1385,15 +1458,17 @@ Each index refers to a vertex in the vertex buffer:
 
 \paragraph{Memory Representation:}
 
-Indices are typically stored as integers:
+Indices are stored as integers, not floats. The bit width is chosen based on the number of vertices:
 
 \begin{equation}
     \text{index size} =
     \begin{cases}
-        2\ \text{bytes (16-bit)} \\
-        4\ \text{bytes (32-bit)}
+        2\ \text{bytes (16-bit)} & \text{if } n_v \leq 65536 \\
+        4\ \text{bytes (32-bit)} & \text{if } n_v > 65536
     \end{cases}
 \end{equation}
+
+Smaller indices save memory and improve cache utilisation. Most meshes in games have fewer than $2^{16}$ vertices, making 16-bit indices the common choice.
 
 \paragraph{Example:}
 
@@ -1401,18 +1476,20 @@ Indices are typically stored as integers:
     F = [0, 1, 2, \; 2, 3, 0]
 \end{equation}
 
-This represents two triangles sharing vertices.
+This represents two triangles sharing vertices 0 and 2, forming a quad. Vertex 0 appears in both triangles but is stored only once in the vertex buffer.
 
 
 \subsection{Transformation Storage}
 
-Each object in a scene has an associated transformation matrix:
+Each object in a scene has an associated transformation matrix that places it in the world:
 
 \begin{equation}
     M \in \mathbb{R}^{4 \times 4}
 \end{equation}
 
 \paragraph{Matrix Layout:}
+
+A $4\times 4$ matrix has 16 scalar entries:
 
 \begin{equation}
     M =
@@ -1426,25 +1503,29 @@ Each object in a scene has an associated transformation matrix:
 
 \paragraph{Memory Size:}
 
+Each entry is a float (4 bytes), so:
+
 \begin{equation}
     \text{matrix size} = 16 \times 4 = 64\ \text{bytes}
 \end{equation}
 
 \paragraph{Storage Format:}
 
-Matrices are stored as a flat array:
+The matrix is stored as a flat array of 16 floats:
 
 \begin{equation}
     [m_{11}, m_{12}, \dots, m_{44}]
 \end{equation}
 
-\paragraph{Note:}
+\paragraph{Note on Row vs Column Major:}
 
-Different APIs may use:
+Different APIs and languages store matrices differently in memory:
 \begin{itemize}
-    \item Row-major order
-    \item Column-major order
+    \item \textbf{Row-major}: row 0 is stored first (C/C++ arrays, HLSL by default). Order: $m_{11}, m_{12}, m_{13}, m_{14}, m_{21}, \dots$
+    \item \textbf{Column-major}: column 0 is stored first (OpenGL/GLSL convention, MATLAB). Order: $m_{11}, m_{21}, m_{31}, m_{41}, m_{12}, \dots$
 \end{itemize}
+
+A matrix that looks correct on paper may produce wrong results at runtime if the expected memory layout does not match how the GPU reads it. This is a common source of bugs when mixing APIs or libraries with different conventions.
 
 
 \subsection{Estimating Memory Usage}
@@ -1471,7 +1552,7 @@ Let:
 
 \paragraph{Index Buffer Size:}
 
-Each triangle uses 3 indices:
+Each triangle uses 3 indices, each of size $s_i$ bytes:
 
 \begin{equation}
     \text{size}_F = n_t \cdot 3 \cdot s_i
@@ -1485,7 +1566,7 @@ where:
 
 \paragraph{Transformation Size:}
 
-For $n_o$ objects:
+For $n_o$ objects, each requiring one $4\times 4$ matrix:
 
 \begin{equation}
     \text{size}_M = n_o \cdot 64
@@ -1506,9 +1587,9 @@ For $n_o$ objects:
 Consider a pyramid with:
 
 \begin{itemize}
-    \item $n_v = 5$ vertices
-    \item $n_t = 6$ triangles
-    \item $k = 3$ (position only)
+    \item $n_v = 5$ vertices (4 base corners + 1 apex)
+    \item $n_t = 6$ triangles (4 side faces + 2 triangles for the square base)
+    \item $k = 3$ (position only: $x, y, z$)
 \end{itemize}
 
 \paragraph{Vertex Memory:}
@@ -1535,9 +1616,11 @@ Consider a pyramid with:
     \text{Total} = 60 + 72 + 64 = 196\ \text{bytes}
 \end{equation}
 
+For context, a modern high-resolution game mesh with position, normal, tangent, and UV ($k = 11$) and $n_v = 100{,}000$ vertices would consume around $4.4\ \text{MB}$ of vertex data alone.
+
 \subsection{Summary}
 
-Graphics data in memory is structured as:
+Graphics data in memory is structured as a collection of per-object tuples:
 
 \begin{equation}
     \text{Scene} =
@@ -1553,18 +1636,18 @@ Each component is stored as contiguous bytes:
 Efficient layout enables:
 
 \begin{itemize}
-    \item Coalesced memory access on GPU
-    \item Parallel processing of vertices
-    \item High throughput rendering
+    \item \textbf{Coalesced memory access on GPU}: when many parallel threads read consecutive addresses simultaneously, the hardware satisfies the requests in a single memory transaction rather than many separate ones
+    \item \textbf{Parallel processing of vertices}: each vertex is an independent unit of work that can be processed by a different GPU thread simultaneously
+    \item \textbf{High throughput rendering}: well-structured data minimises the time GPUs spend waiting for memory, keeping the arithmetic units busy
 \end{itemize}
 
 \section{Specialized Hardware in GPUs}
 
-Modern GPUs are highly specialized processors designed to execute large numbers of similar operations in parallel. Over time, they have evolved from fixed-function graphics devices to programmable, massively parallel compute units with dedicated hardware for specific tasks.
+Modern GPUs are highly specialized processors designed to execute large numbers of similar operations in parallel. Over time, they have evolved from fixed-function graphics devices to programmable, massively parallel compute units with dedicated hardware for specific tasks. Understanding what is handled in hardware versus software is essential for writing efficient graphics code.
 
 \subsection{Graphics Pipelines and Fixed Function Units}
 
-Early GPUs implemented a \textbf{fixed-function pipeline}, where each stage of the rendering process was hardwired.
+Early GPUs (circa 1990s) implemented a \textbf{fixed-function pipeline}: every stage of the rendering process was hardwired in silicon and could only be configured via a limited set of parameters. The programmer could not write custom shading code; they could only set state variables (lighting colours, texture modes, etc.) and the hardware performed a predetermined computation.
 
 The classical pipeline can be represented as:
 
@@ -1582,11 +1665,11 @@ followed by rasterization:
 \paragraph{Fixed-Function Stages:}
 
 \begin{itemize}
-    \item Vertex transformation
-    \item Primitive assembly
-    \item Clipping
-    \item Rasterization
-    \item Depth testing
+    \item Vertex transformation (multiply by $M_{proj} M_{view} M_{model}$)
+    \item Primitive assembly (group vertices into triangles)
+    \item Clipping (discard geometry outside the view frustum)
+    \item Rasterization (determine which pixels each triangle covers)
+    \item Depth testing (z-buffer visibility resolution)
 \end{itemize}
 
 These stages were implemented directly in hardware, meaning:
@@ -1595,17 +1678,19 @@ These stages were implemented directly in hardware, meaning:
     \text{Transformation} = \text{Dedicated combinational logic}
 \end{equation}
 
-Modern GPUs replace most fixed-function stages with programmable shaders:
+The advantage was speed and power efficiency; the disadvantage was inflexibility, every application was constrained to the same hardware lighting equations and texture blending modes.
+
+Modern GPUs replace most fixed-function stages with \textbf{programmable shaders} written in languages like GLSL or HLSL:
 
 \begin{equation}
     \text{Vertex Shader}, \quad \text{Fragment Shader}, \quad \text{Compute Shader}
 \end{equation}
 
-However, some stages (e.g., rasterization, depth testing) remain hardware-accelerated.
+However, some stages (rasterization and depth testing) remain implemented in fixed hardware, as they are simple, well-defined operations executed billions of times per second that benefit enormously from dedicated silicon. Programmable shaders execute on general-purpose shader processors that share cores and run in a \textbf{SIMT} (Single Instruction, Multiple Threads) fashion: a group of threads (called a \emph{warp} or \emph{wavefront}) executes the same instruction simultaneously on different data. This is why branching in shaders can be expensive, divergent branches cause some threads to idle while others execute.
 
 \subsection{Ray Tracing Cores (RT Cores)}
 
-Ray tracing computes visibility by tracing rays through a scene.
+Ray tracing computes visibility and lighting by casting rays through the scene and testing for intersections with geometry. Unlike rasterization, which projects geometry \emph{forward} onto the screen, ray tracing traces rays \emph{backward} from the camera into the scene.
 
 A ray is defined as:
 
@@ -1615,9 +1700,9 @@ A ray is defined as:
 
 where:
 \begin{itemize}
-    \item $\mathbf{o}$ is the ray origin
-    \item $\mathbf{d}$ is the direction
-    \item $t \ge 0$
+    \item $\mathbf{o}$ is the ray origin (the camera position for primary rays)
+    \item $\mathbf{d}$ is the unit direction vector
+    \item $t \ge 0$ parameterises the ray; increasing $t$ moves further along the ray
 \end{itemize}
 
 The core operation is ray-geometry intersection:
@@ -1639,14 +1724,9 @@ subject to:
     \alpha + \beta + \gamma = 1
 \end{equation}
 
-RT cores accelerate:
+\paragraph{Acceleration Structures:}
 
-\begin{itemize}
-    \item Ray-triangle intersection
-    \item Ray traversal through acceleration structures (e.g., BVH)
-\end{itemize}
-
-This reduces computational complexity from:
+Testing a ray against every triangle in a scene is $O(n)$ per ray. With millions of triangles and millions of rays, this is prohibitively expensive. Instead, triangles are organized into a \textbf{Bounding Volume Hierarchy (BVH)}: a tree where each internal node stores an axis-aligned bounding box (AABB) enclosing all the triangles in its subtree. Ray traversal starts at the root, recursively descending only into children whose bounding boxes the ray intersects. This reduces the expected traversal cost from:
 
 \begin{equation}
     O(n) \rightarrow O(\log n)
@@ -1654,9 +1734,18 @@ This reduces computational complexity from:
 
 for scene traversal.
 
+RT cores accelerate the two most expensive parts of ray tracing in hardware:
+
+\begin{itemize}
+    \item \textbf{Ray-AABB intersection}: testing a ray against a bounding box for BVH traversal
+    \item \textbf{Ray-triangle intersection}: the precise intersection test once a leaf node is reached
+\end{itemize}
+
+These tests are performed by fixed-function hardware units running in parallel with the shader cores, freeing the shader processors to handle shading while the RT cores handle traversal.
+
 \subsection{Tensor Cores and Machine Learning}
 
-Tensor cores are specialized units designed for matrix operations.
+Tensor cores are specialized units designed specifically to accelerate \textbf{matrix multiplication}, the fundamental operation in deep learning and linear algebra.
 
 The fundamental operation is matrix multiplication:
 
@@ -1673,51 +1762,59 @@ with:
 These operations are central to:
 
 \begin{itemize}
-    \item Neural networks
-    \item Linear algebra
-    \item Physics simulations
+    \item Neural networks (matrix-multiply-heavy forward and backward passes)
+    \item Linear algebra (solving systems, decompositions)
+    \item Physics simulations (finite element methods)
 \end{itemize}
 
-Tensor cores perform fused operations:
+Tensor cores perform \textbf{fused multiply-add (FMA)} operations on entire small matrix tiles in a single instruction:
 
 \begin{equation}
     D = A \cdot B + C
 \end{equation}
 
-This is known as a \textbf{fused multiply-add (FMA)}.
+The ``fused'' part means the multiply and add are performed in a single step without intermediate rounding, which improves both speed and numerical accuracy.
 
 \paragraph{Key Property:}
 
-These units execute many operations in parallel:
+Tensor cores can perform this operation in substantially fewer clock cycles than general shader cores, because the hardware is physically wired to implement the specific pattern of multiplications and additions required by the matrix product:
 
 \begin{equation}
     \text{Throughput} \gg \text{CPU scalar performance}
 \end{equation}
 
+Modern applications include \textbf{AI upscaling} (e.g.\ DLSS): a neural network runs on tensor cores to upscale a low-resolution rendered frame to full resolution, producing a result visually similar to native resolution at a fraction of the rendering cost.
+
 
 \subsection{Evolution of GPU Specialization}
 
-The evolution of GPUs can be understood as increasing specialization of hardware for common computational patterns.
+The evolution of GPUs can be understood as a progression from a single dedicated purpose (rendering fixed-pipeline graphics) toward increasingly general and specialized parallel computation.
 
-\paragraph{Stage 1: Fixed-Function Graphics}
+\paragraph{Stage 1: Fixed-Function Graphics (1990s)}
 
 \begin{equation}
     \text{Hardwired pipeline for rendering}
 \end{equation}
 
-\paragraph{Stage 2: Programmable Shaders}
+All rendering operations encoded directly in silicon. Fast and efficient, but inflexible: programmers could not write custom shading code.
+
+\paragraph{Stage 2: Programmable Shaders (early 2000s)}
 
 \begin{equation}
     \text{Generalized arithmetic units (ALUs)}
 \end{equation}
 
-\paragraph{Stage 3: General-Purpose GPU (GPGPU)}
+Vertex and pixel shaders replaced fixed transformation and lighting. Programmers could write custom programs running on the GPU, unlocking per-pixel lighting, environment mapping, and procedural effects.
+
+\paragraph{Stage 3: General-Purpose GPU (GPGPU, mid 2000s)}
 
 \begin{equation}
     \text{Parallel execution of arbitrary compute kernels}
 \end{equation}
 
-\paragraph{Stage 4: Specialized Accelerators}
+APIs like CUDA and OpenCL exposed the GPU's parallel compute power for non-graphics tasks: physics simulation, machine learning, scientific computing. The GPU became a general parallel processor.
+
+\paragraph{Stage 4: Specialized Accelerators (present)}
 
 \begin{itemize}
     \item RT cores (ray tracing)
@@ -1725,8 +1822,10 @@ The evolution of GPUs can be understood as increasing specialization of hardware
 \end{itemize}
 
 \begin{equation}
-    \text{Specialized hardware} \Rightarrow \text{higher efficiency}
+    \text{Specialized hardware} \Rightarrow \text{higher efficiency per watt}
 \end{equation}
+
+Each specialization trades flexibility for throughput: a general ALU can compute anything but does it relatively slowly; a dedicated unit does one thing extremely fast. The art of GPU architecture is determining which operations are frequent and regular enough to justify dedicated silicon.
 
 
 \subsection{Conceptual Interpretation}
@@ -1748,5 +1847,7 @@ The GPU is therefore best understood as:
 \begin{equation}
     \text{A massively parallel linear algebra processor with specialized accelerators}
 \end{equation}
+
+The entire 3D graphics pipeline, from raw bits in memory to pixels on screen, is a sequence of structured linear algebra operations, executed in parallel across thousands of cores, with specialized hardware handling the most repetitive and performance-critical steps.
 
 \end{document}
