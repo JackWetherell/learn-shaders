@@ -1,4 +1,4 @@
-This is pdfTeX, Version 3.141592653-2.6-1.40.27 (TeX Live 2026/dev/Arch Linux) (preloaded format=pdflatex 2025.4.20)  12 APR 2026 00:10
+This is pdfTeX, Version 3.141592653-2.6-1.40.27 (TeX Live 2026/dev/Arch Linux) (preloaded format=pdflatex 2025.4.20)  12 APR 2026 01:03
 entering extended mode
  restricted \write18 enabled.
  %&-line parsing enabled.
@@ -1030,6 +1030,36 @@ Package fancyhdr Warning: \headheight is too small (12.0pt):
 (fancyhdr)                \addtolength{\topmargin}{-1.59999pt}.
 
 [36]
+<../data/images/sphere.png, id=843, 322.20375pt x 615.0478pt>
+File: ../data/images/sphere.png Graphic file (type png)
+<use ../data/images/sphere.png>
+Package pdftex.def Info: ../data/images/sphere.png  used on input line 2278.
+(pdftex.def)             Requested size: 190.24568pt x 363.166pt.
+LaTeX Font Info:    External font `lmex10' loaded for size
+(Font)              <10> on input line 2279.
+LaTeX Font Info:    External font `lmex10' loaded for size
+(Font)              <7> on input line 2279.
+LaTeX Font Info:    External font `lmex10' loaded for size
+(Font)              <5> on input line 2279.
+<../data/images/camera.png, id=844, 325.96782pt x 496.85625pt>
+File: ../data/images/camera.png Graphic file (type png)
+<use ../data/images/camera.png>
+Package pdftex.def Info: ../data/images/camera.png  used on input line 2285.
+(pdftex.def)             Requested size: 190.24568pt x 289.98877pt.
+
+
+LaTeX Warning: Command \textdegree invalid in math mode on input line 2286.
+
+
+LaTeX Warning: Command \textdegree invalid in math mode on input line 2286.
+
+
+LaTeX Warning: Command \textdegree invalid in math mode on input line 2286.
+
+
+LaTeX Warning: Command \textdegree invalid in math mode on input line 2286.
+
+
 
 
 Package fancyhdr Warning: \headheight is too small (12.0pt): 
@@ -1038,20 +1068,64 @@ Package fancyhdr Warning: \headheight is too small (12.0pt):
 (fancyhdr)                You might also make \topmargin smaller:
 (fancyhdr)                \addtolength{\topmargin}{-1.59999pt}.
 
-[37] (./notes.aux)
+[37]
+
+
+Package fancyhdr Warning: \headheight is too small (12.0pt): 
+(fancyhdr)                Make it at least 13.59999pt, for example:
+(fancyhdr)                \setlength{\headheight}{13.59999pt}.
+(fancyhdr)                You might also make \topmargin smaller:
+(fancyhdr)                \addtolength{\topmargin}{-1.59999pt}.
+
+[38 <../data/images/sphere.png (PNG copy)> <../data/images/camera.png (PNG copy
+)>]
+
+
+Package fancyhdr Warning: \headheight is too small (12.0pt): 
+(fancyhdr)                Make it at least 13.59999pt, for example:
+(fancyhdr)                \setlength{\headheight}{13.59999pt}.
+(fancyhdr)                You might also make \topmargin smaller:
+(fancyhdr)                \addtolength{\topmargin}{-1.59999pt}.
+
+[39]
+<../data/images/unlit_color.png, id=912, 809.27344pt x 411.78844pt>
+File: ../data/images/unlit_color.png Graphic file (type png)
+<use ../data/images/unlit_color.png>
+Package pdftex.def Info: ../data/images/unlit_color.png  used on input line 242
+0.
+(pdftex.def)             Requested size: 371.43698pt x 189.00398pt.
+
+
+
+Package fancyhdr Warning: \headheight is too small (12.0pt): 
+(fancyhdr)                Make it at least 13.59999pt, for example:
+(fancyhdr)                \setlength{\headheight}{13.59999pt}.
+(fancyhdr)                You might also make \topmargin smaller:
+(fancyhdr)                \addtolength{\topmargin}{-1.59999pt}.
+
+[40]
+
+
+Package fancyhdr Warning: \headheight is too small (12.0pt): 
+(fancyhdr)                Make it at least 13.59999pt, for example:
+(fancyhdr)                \setlength{\headheight}{13.59999pt}.
+(fancyhdr)                You might also make \topmargin smaller:
+(fancyhdr)                \addtolength{\topmargin}{-1.59999pt}.
+
+[41 <../data/images/unlit_color.png (PNG copy)>] (./notes.aux)
  ***********
 LaTeX2e <2024-11-01> patch level 2
 L3 programming layer <2025-01-18>
  ***********
 Package rerunfilecheck Info: File `notes.out' has not changed.
-(rerunfilecheck)             Checksum: 55827BF6E95C6D7D9098F0957228B47B;12195.
+(rerunfilecheck)             Checksum: 35FD4B9703DE7CC108E9BC481B30EEF5;12469.
  ) 
 Here is how much of TeX's memory you used:
- 17816 strings out of 475171
- 276751 string characters out of 5767095
- 963450 words of memory out of 5000000
- 39966 multiletter control sequences out of 15000+600000
- 614820 words of font info for 170 fonts, out of 8000000 for 9000
+ 18025 strings out of 475171
+ 280305 string characters out of 5767095
+ 964774 words of memory out of 5000000
+ 40055 multiletter control sequences out of 15000+600000
+ 634437 words of font info for 205 fonts, out of 8000000 for 9000
  14 hyphenation exceptions out of 8191
  75i,14n,79p,1002b,1977s stack positions out of 10000i,1000n,20000p,200000b,200000s
 </usr/share/texmf-dist/fonts/type1/public/lm/lmbx10.pfb></usr/share/texmf-dis
@@ -1067,10 +1141,10 @@ lmsy10.pfb></usr/share/texmf-dist/fonts/type1/public/lm/lmsy8.pfb></usr/share/t
 exmf-dist/fonts/type1/public/lm/lmtt10.pfb></usr/share/texmf-dist/fonts/type1/p
 ublic/lm/lmtt8.pfb></usr/share/texmf-dist/fonts/type1/public/amsfonts/symbols/m
 sbm10.pfb>
-Output written on notes.pdf (37 pages, 431559 bytes).
+Output written on notes.pdf (41 pages, 566000 bytes).
 PDF statistics:
- 1012 PDF objects out of 1200 (max. 8388607)
- 928 compressed objects within 10 object streams
- 433 named destinations out of 1000 (max. 500000)
- 31233 words of extra memory for PDF output out of 35830 (max. 10000000)
+ 1129 PDF objects out of 1200 (max. 8388607)
+ 1037 compressed objects within 11 object streams
+ 509 named destinations out of 1000 (max. 500000)
+ 43552 words of extra memory for PDF output out of 51595 (max. 10000000)
 

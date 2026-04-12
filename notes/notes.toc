@@ -127,3 +127,13 @@
 \contentsline {paragraph}{Writing via swizzle.}{36}{lstnumber.-10.6}%
 \contentsline {paragraph}{Common patterns in Unity shaders.}{36}{lstnumber.-11.3}%
 \contentsline {subsection}{\numberline {9.8}Data Flow Summary}{36}{subsection.9.8}%
+\contentsline {section}{\numberline {10}Unity: Unlit Shaders}{37}{section.10}%
+\contentsline {subsection}{\numberline {10.1}Basic Colour}{37}{subsection.10.1}%
+\contentsline {paragraph}{Scene setup.}{37}{subsection.10.1}%
+\contentsline {paragraph}{The shader.}{38}{equation.198}%
+\contentsline {paragraph}{CGPROGRAM and UnityCG.cginc.}{39}{lstnumber.-13.46}%
+\contentsline {paragraph}{Properties block.}{39}{lstnumber.-13.46}%
+\contentsline {paragraph}{Vertex input and output structs.}{40}{lstnumber.-15.1}%
+\contentsline {paragraph}{Vertex shader.}{40}{lstnumber.-16.2}%
+\contentsline {paragraph}{Fragment shader.}{40}{equation.199}%
+\contentsline {paragraph}{Render output.}{41}{lstnumber.-18.4}%

@@ -2258,4 +2258,172 @@ Thus, the mathematical pipeline developed throughout these notes --- from bits i
     \text{Bits} \rightarrow \text{Vertices} \rightarrow \text{Clip Space} \rightarrow \text{Fragments} \rightarrow \text{Shading} \rightarrow \text{Pixels}
 \end{equation}
 
+
+\section{Unity: Unlit Shaders}
+
+An \textbf{unlit shader} computes a colour for every fragment without consulting the scene's lights, shadows, or surface normals. There is no illumination model. Every fragment belonging to the surface returns the same value, determined entirely by the material's uniform parameters rather than any property of the geometry or the scene. This absence of lighting complexity makes unlit shaders the clearest possible lens through which to examine the shader pipeline in isolation: the full vertex-to-fragment journey still executes, but the fragment stage reduces to a trivial constant function, making it easy to see exactly where each piece of data comes from and where it goes.
+
+\subsection{Basic Colour}
+
+The most elementary unlit shader outputs a single, solid colour across the entire surface. There is one material property, one line of vertex computation, and one line of fragment computation. The geometry is transformed correctly, rasterized correctly, and coverage-tested correctly --- yet the fragment shader discards every interpolated attribute and returns a constant.
+
+\paragraph{Scene setup.}
+
+The scene contains two objects: a Unity primitive sphere and the main camera (Figures~\ref{fig:sphere_inspector} and~\ref{fig:camera_inspector}).
+
+\begin{figure}[H]
+    \centering
+    \begin{subfigure}[t]{0.42\textwidth}
+        \centering
+        \includegraphics[width=\textwidth]{../data/images/sphere.png}
+        \caption{Sphere inspector. The object sits at the origin with default scale. The \texttt{Shader1} material is applied, with the \texttt{\_Color} property set to red: $(r, g, b, a) = (1, 0, 0, 1)$.}
+        \label{fig:sphere_inspector}
+    \end{subfigure}
+    \hfill
+    \begin{subfigure}[t]{0.42\textwidth}
+        \centering
+        \includegraphics[width=\textwidth]{../data/images/camera.png}
+        \caption{Camera inspector. The camera is placed at $(0, 0, -5)$ in world space, aimed along $+z$ toward the origin. Perspective projection, FOV $= 74.83°$, near $= 0.3$, far $= 1000$. The background is solid black.}
+        \label{fig:camera_inspector}
+    \end{subfigure}
+    \caption{The complete scene: a sphere at the origin and a camera looking at it from $z = -5$.}
+    \label{fig:scene_setup}
+\end{figure}
+
+The camera's view frustum is therefore aligned with $-z$ pointing into the scene. The sphere sits at the origin, which in view space maps to $(0, 0, 5)$ --- squarely in front of the near and far clipping planes. The coordinate transform chain from Section 4 applies without modification:
+
+\begin{equation}
+    \mathbf{v}_{clip} = M_{proj} \cdot M_{view} \cdot M_{model} \cdot \mathbf{v}_{local}
+\end{equation}
+
+where $M_{model} = I$ (the sphere is at the origin, unrotated, unit scale) and $M_{view}$ encodes the camera translation of $-5$ along $z$.
+
+\paragraph{The shader.}
+
+The complete \texttt{Shader1.shader} file is:
+
+\begin{lstlisting}
+Shader "Unlit/Shader1"
+{
+    Properties
+    {
+        _Color ("Color", Color) = (1, 1, 1, 1)
+    }
+
+    SubShader
+    {
+        Tags { "RenderType"="Opaque" }
+
+        Pass
+        {
+            CGPROGRAM
+            #pragma vertex vert
+            #pragma fragment frag
+
+            #include "UnityCG.cginc"
+
+            float4 _Color;
+
+            struct MeshData
+            {
+                float4 vertex : POSITION;
+            };
+
+            struct Interpolators
+            {
+                float4 vertex : SV_POSITION;
+            };
+
+            Interpolators vert(MeshData v)
+            {
+                Interpolators o;
+                o.vertex = UnityObjectToClipPos(v.vertex);
+                return o;
+            }
+
+            float4 frag(Interpolators i) : SV_Target
+            {
+                return _Color;
+            }
+            ENDCG
+        }
+    }
+}
+\end{lstlisting}
+
+Each block has a specific and minimal role.
+
+\paragraph{CGPROGRAM and UnityCG.cginc.}
+
+This shader uses \texttt{CGPROGRAM}/\texttt{ENDCG} rather than the \texttt{HLSLPROGRAM}/\texttt{ENDHLSL} blocks used in the theoretical sections of these notes. Both compile HLSL; the difference is the include path. \texttt{CGPROGRAM} pulls in Unity's legacy \texttt{UnityCG.cginc} header, which is standard for the Built-in Render Pipeline and provides convenience macros and functions such as \texttt{UnityObjectToClipPos}. The underlying language and GPU execution model are identical.
+
+\paragraph{Properties block.}
+
+\begin{lstlisting}
+_Color ("Color", Color) = (1, 1, 1, 1)
+\end{lstlisting}
+
+A single \texttt{Color} uniform is declared, defaulting to opaque white. It is exposed in the Material inspector, where it has been set to red $(1, 0, 0, 1)$ for this render. Inside the \texttt{CGPROGRAM} block the matching HLSL variable:
+
+\begin{lstlisting}
+float4 _Color;
+\end{lstlisting}
+
+receives the inspector value. This is the per-draw-call uniform path described in Section 9.2: the CPU writes the value once into a constant buffer and the GPU reads it identically in every fragment invocation.
+
+\paragraph{Vertex input and output structs.}
+
+\begin{lstlisting}
+struct MeshData     { float4 vertex : POSITION; };
+struct Interpolators{ float4 vertex : SV_POSITION; };
+\end{lstlisting}
+
+\texttt{MeshData} requests exactly one attribute from the vertex buffer: the local-space position, bound by the \texttt{POSITION} semantic. Normals, UVs, tangents, and vertex colours are all present in the sphere's vertex buffer --- Unity's primitive sphere is a fully-attributed mesh --- but the shader does not declare them and so the GPU does not fetch them. This is a deliberate choice: since the fragment shader will not use any of that data, there is no reason to carry it through the pipeline.
+
+\texttt{Interpolators} carries only the mandatory \texttt{SV\_POSITION} output. With no other varyings declared, the rasterizer has nothing to interpolate across the triangle surface.
+
+\paragraph{Vertex shader.}
+
+\begin{lstlisting}
+Interpolators vert(MeshData v)
+{
+    Interpolators o;
+    o.vertex = UnityObjectToClipPos(v.vertex);
+    return o;
+}
+\end{lstlisting}
+
+\texttt{UnityObjectToClipPos} is a \texttt{UnityCG.cginc} wrapper equivalent to:
+
+\begin{equation}
+    \mathbf{v}_{clip} = M_{proj} \cdot M_{view} \cdot M_{model} \cdot \mathbf{v}_{local}
+    \quad \equiv \quad \texttt{mul(UNITY\_MATRIX\_MVP,\; v.vertex)}
+\end{equation}
+
+This single call performs the entire coordinate-space journey from Section 4 in one matrix multiply. The result, written to \texttt{SV\_POSITION}, is the only value the vertex shader produces. Every vertex is processed independently and in parallel across the GPU's shader cores.
+
+\paragraph{Fragment shader.}
+
+\begin{lstlisting}
+float4 frag(Interpolators i) : SV_Target
+{
+    return _Color;
+}
+\end{lstlisting}
+
+The fragment shader is a constant function. The parameter \texttt{i} is received but never read --- there is nothing in \texttt{Interpolators} beyond the position, which is consumed by the rasterizer and not forwarded to the fragment shader anyway. Every fragment, regardless of where on the sphere it lies, returns the same \texttt{float4} value: the red colour set in the inspector.
+
+\paragraph{Render output.}
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.82\textwidth]{../data/images/unlit_color.png}
+    \caption{The rendered output. The sphere appears as a flat red disc on a black background. The silhouette is geometrically correct --- the rasterizer computed triangle coverage accurately --- but without any variation in the fragment output there is no visual information about the curvature of the surface.}
+    \label{fig:unlit_render}
+\end{figure}
+
+The result (Figure~\ref{fig:unlit_render}) is a perfectly uniform red disc. The silhouette is exactly what the rasterizer computed from the sphere's clip-space triangle coverage: the projection of a sphere onto the image plane is an ellipse, which at this camera position is a circle. The shape is correct. Yet the surface reads as flat because the fragment shader emits no variation in colour. In a lit shader, the per-fragment world-space normal $\hat{\mathbf{n}}$ would modulate the output through the Lambertian term $\max(0, \hat{\mathbf{n}} \cdot \hat{\mathbf{l}})$, darkening fragments where the surface faces away from the light and producing the shading gradient that communicates curvature to the eye. Here, that term is absent entirely.
+
+This is the key property of an unlit shader: the rasterizer runs in full, correctly determining which pixels belong to the surface, but the fragment stage treats every one of those pixels identically. The geometry is present in the pipeline --- its clip-space position drove the coverage calculation --- it is simply not used in the shading decision.
+
 \end{document}
