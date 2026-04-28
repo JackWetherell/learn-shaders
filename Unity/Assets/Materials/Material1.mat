@@ -62,6 +62,8 @@ Material:
     m_Ints: []
     m_Floats:
     - _BumpScale: 1
+    - _ColorEnd: 1
+    - _ColorStart: 0
     - _Cutoff: 0.5
     - _DetailNormalMapScale: 1
     - _DstBlend: 0
@@ -82,7 +84,7 @@ Material:
     - _ZWrite: 1
     m_Colors:
     - _Color: {r: 0, g: 1, b: 0, a: 1}
-    - _ColorA: {r: 1, g: 0, b: 0, a: 0}
+    - _ColorA: {r: 0.043824196, g: 1, b: 0, a: 0}
     - _ColorB: {r: 0, g: 0.122187614, b: 1, a: 1}
     - _EmissionColor: {r: 0, g: 0, b: 0, a: 1}
   m_BuildTextureStacks: []
