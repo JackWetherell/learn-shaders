@@ -70,3 +70,7 @@ Freya's series is one of the clearest introductions to shader programming availa
 9. **Shaders in Practice**: ShaderLab structure, Properties, vertex & fragment shaders in HLSL, swizzling, data flow
 
 The document is written alongside the shader experiments so that every equation has a corresponding line of real GPU code.
+
+## Useful Links
+
+1. https://developer.download.nvidia.com/cg/index_stdlib.html
