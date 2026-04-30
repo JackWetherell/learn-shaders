@@ -46,7 +46,7 @@ Shader "Unlit/Shader1"
             {
                 Interpolators o;
                 o.vertex = UnityObjectToClipPos(v.vertex);
-                o.normal = UnityObjectToWorldNormal(v.normal);
+                o.normal = v.normal;
                 o.uv = v.uv;
                 return o;
             }
@@ -58,7 +58,8 @@ Shader "Unlit/Shader1"
 
             float4 frag(Interpolators i) : SV_Target
             {
-                float t = cos(i.uv.x * TAU * 3);
+                float4 t = float4(i.normal, 0);
+                // float t = cos(i.uv.x * TAU * 3);
                 return t;
             }
             ENDCG
