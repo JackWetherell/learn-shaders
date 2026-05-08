@@ -58,15 +58,15 @@ Shader "Unlit/Shader1"
 
             float4 frag(Interpolators i) : SV_Target
             {
-                float yOffset = cos(i.uv.x * TAU * 8) * 0.05;
-                float t = cos((i.uv.y + yOffset - _Time.y*0.1) * TAU * 5);
-                float4 color = float4(t, t, t, 1) * i.normal.x * i.uv.x;
-                return color;
+                float yOffset = cos(i.uv.x * TAU * 8) * 0.01;
+                float t = cos((i.uv.y + yOffset - _Time.y*0.1) * TAU * 5) *0.5 + 0.5;
+                t *= 1.0 - i.uv.y;
+                return t;
             }
             ENDCG
         }
     }
 }
 
-// 6: 2:13:50
+// 6: 2:31:00
  
