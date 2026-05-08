@@ -10,7 +10,7 @@ Shader "Unlit/Shader1"
 
     SubShader
     {
-        Tags { "RenderType"="Opaque" }
+        Tags { "RenderType"="Translucent" }
 
         Pass
         {
@@ -58,9 +58,10 @@ Shader "Unlit/Shader1"
 
             float4 frag(Interpolators i) : SV_Target
             {
-                float xOffset = cos(i.uv.y * TAU * 8) * 0.1;
-                float t = cos((i.uv.x + xOffset) * TAU * 5);
-                return t;
+                float yOffset = cos(i.uv.x * TAU * 8) * 0.05;
+                float t = cos((i.uv.y + yOffset - _Time.y*0.1) * TAU * 5);
+                float4 color = float4(t, t, t, 1) * i.normal.x * i.uv.x;
+                return color;
             }
             ENDCG
         }
